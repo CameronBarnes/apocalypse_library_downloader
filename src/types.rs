@@ -71,7 +71,7 @@ impl LibraryItem {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DownloadType {
-    HTTP,
+    Http,
     Rsync,
     Either,
 }

@@ -98,7 +98,7 @@ pub fn download_category(path: &str, category: &Category, prefer_http: bool) -> 
         match item {
             crate::types::LibraryItem::Document(doc) => {
                 match doc.download_type() {
-                    crate::types::DownloadType::HTTP =>  {
+                    crate::types::DownloadType::Http =>  {
                         let path = format!("{path}/{}", doc.url().split('/').last().unwrap());
                         handle_download_file(doc.url(), &path, false)
                     },
