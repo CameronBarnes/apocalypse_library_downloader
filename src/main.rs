@@ -14,6 +14,8 @@ struct Args {
     /// Path to output the downloaded content
     #[arg(short, long, default_value_t = String::from("./library"))]
     path: String,
+    #[arg(short, long, default_value_t = false)]
+    prefer_http: bool,
 }
 
 fn main() -> Result<()> {
@@ -34,7 +36,7 @@ fn main() -> Result<()> {
     let path = args.path;
     download::setup_folder(&path)?;
     library.iter().for_each(|cat| {
-        download::download_category(&path, cat).unwrap(); // Ignore for now
+        download::download_category(&path, cat, args.prefer_http).unwrap(); // Ignore for now
     });
 
     Ok(())

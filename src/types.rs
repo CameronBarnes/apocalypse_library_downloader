@@ -39,6 +39,41 @@ impl LibraryItem {
             LibraryItem::Category(cat) => cat.enabled,
         }
     }
+
+    pub fn set_enabled(&mut self, enabled: bool) -> bool {
+        match self {
+            LibraryItem::Document(doc) => {
+                if doc.can_download() {
+                    doc.enabled = enabled;
+                } else {
+                    doc.enabled = false;
+                }
+                doc.enabled
+            },
+            LibraryItem::Category(cat) => {
+                if cat.can_download() {
+                    cat.enabled = enabled;
+                } else {
+                    cat.enabled = false;
+                }
+                cat.enabled
+            },
+        }
+    }
+
+    pub fn can_download(&self) -> bool {
+        match self {
+            LibraryItem::Document(doc) => doc.can_download(),
+            LibraryItem::Category(cat) => cat.can_download(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum DownloadType {
+    HTTP,
+    Rsync,
+    Either,
 }
 
 #[derive(Debug)]
@@ -46,13 +81,14 @@ pub struct Document {
     name: String,
     url: String,
     size: usize,
-    rsync: bool,
+    download_type: DownloadType,
     pub enabled: bool,
 }
 
 impl Document {
-    pub fn new(name: String, url: String, size: usize, rsync: bool) -> Self {
-        Document{name, url, size, rsync, enabled: true}
+    pub fn new(name: String, url: String, size: usize, d_type: DownloadType) -> Self {
+        let enabled = d_type != DownloadType::Rsync || !crate::IS_WINDOWS;
+        Document{name, url, size, download_type: d_type, enabled}
     }
 
     pub fn name(&self) -> &str {
@@ -67,8 +103,8 @@ impl Document {
         self.size
     }
 
-    pub fn rsync(&self) -> bool {
-        self.rsync
+    pub fn download_type(&self) -> &DownloadType {
+        &self.download_type
     }
 
     pub fn enabled_size(&self) -> usize {
@@ -77,6 +113,11 @@ impl Document {
         } else {
             0
         }
+    }
+
+    /// In cases such as a rsync Document on a windows system we cant download it
+    pub fn can_download(&self) -> bool {
+        self.download_type != DownloadType::Rsync || !crate::IS_WINDOWS
     }
 
     pub fn human_readable_size(&self) -> String {
@@ -93,8 +134,14 @@ pub struct Category {
 }
 
 impl Category {
-    pub fn new(name: String, items: Vec<LibraryItem>, single_selection: bool) -> Self {
-        Category{name, items, enabled: true, single_selection}
+    pub fn new(name: String, mut items: Vec<LibraryItem>, single_selection: bool) -> Self {
+        if single_selection { // Only one option can be enabled at a time with single selection
+            (1..items.len()).for_each(|i| {
+                items[i].set_enabled(false);
+            });
+        }
+        let enabled = items.iter().any(LibraryItem::can_download);
+        Category{name, items, enabled, single_selection}
     }
 
     pub fn name(&self) -> &str {
@@ -111,6 +158,10 @@ impl Category {
         } else {
             0
         }
+    }
+
+    pub fn can_download(&self) -> bool {
+        self.items.iter().any(|item| item.can_download())
     }
 
     pub fn single_selection(&self) -> bool {

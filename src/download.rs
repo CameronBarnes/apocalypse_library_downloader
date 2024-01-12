@@ -90,26 +90,32 @@ pub fn handle_download_file(url: &str, path_str: &str, overwrite: bool) -> Resul
 
 }
 
-pub fn download_category(path: &str, category: &Category) -> Result<()> {
+pub fn download_category(path: &str, category: &Category, prefer_http: bool) -> Result<()> {
 
     let path = format!("{path}/{}", category.name());
     setup_folder(&path)?;
-    category.items.iter().filter(|item| item.enabled()).for_each(|item| {
+    category.items.iter().filter(|item| item.enabled() && item.can_download()).for_each(|item| {
         match item {
             crate::types::LibraryItem::Document(doc) => {
-                if doc.rsync() {
-                    todo!("Handle this case"); // TODO: fix this
-                    if crate::IS_WINDOWS {
-                        // TODO: handle this case
-
-                    }
-                    Ok(()) //TODO: Remove this
-                } else {
-                    let path = format!("{path}/{}", doc.url().split('/').last().unwrap());
-                    handle_download_file(doc.url(), &path, false)
+                match doc.download_type() {
+                    crate::types::DownloadType::HTTP =>  {
+                        let path = format!("{path}/{}", doc.url().split('/').last().unwrap());
+                        handle_download_file(doc.url(), &path, false)
+                    },
+                    crate::types::DownloadType::Rsync => {
+                        todo!() //TODO: handle rsync download
+                    },
+                    crate::types::DownloadType::Either => {
+                        if crate::IS_WINDOWS || prefer_http {
+                            let path = format!("{path}/{}", doc.url().split('/').last().unwrap());
+                            handle_download_file(doc.url(), &path, false)
+                        } else {
+                            todo!() //TODO: handle rsync download
+                        }
+                    },
                 }
             },
-            crate::types::LibraryItem::Category(cat) => download_category(&path, cat),
+            crate::types::LibraryItem::Category(cat) => download_category(&path, cat, prefer_http),
         }.unwrap(); // We're just going to ignore this for now
     });
 
