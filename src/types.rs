@@ -1,6 +1,9 @@
 use humansize::WINDOWS;
+use serde::Deserialize;
 
-#[derive(Debug)]
+use crate::term::ui::StatefulListCounter;
+
+#[derive(Debug, Deserialize)]
 pub enum LibraryItem {
     Document(Document),
     Category(Category),
@@ -69,14 +72,14 @@ impl LibraryItem {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub enum DownloadType {
     Http,
     Rsync,
     Either,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Document {
     name: String,
     url: String,
@@ -125,12 +128,14 @@ impl Document {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Category {
     name: String,
     pub items: Vec<LibraryItem>,
     single_selection: bool,
     pub enabled: bool,
+    #[serde(skip)]
+    pub counter: StatefulListCounter,
 }
 
 impl Category {
@@ -141,7 +146,18 @@ impl Category {
             });
         }
         let enabled = items.iter().any(LibraryItem::can_download);
-        Category{name, items, enabled, single_selection}
+        let len =  items.len();
+        Category{name, items, enabled, single_selection, counter: StatefulListCounter::new(len)}
+    }
+
+    pub fn fix_counter(&mut self) {
+        self.counter = StatefulListCounter::new(self.items.len());
+        for item in &mut self.items {
+            match item {
+                LibraryItem::Document(_) => {},
+                LibraryItem::Category(cat) => cat.fix_counter(),
+            }
+        }
     }
 
     pub fn name(&self) -> &str {

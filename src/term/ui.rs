@@ -3,7 +3,7 @@ use ratatui::{prelude::*, widgets::{ListState, ListItem, List, Block, Borders, P
 
 use super::app::App;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StatefulListCounter {
     state: ListState,
     size: usize,
