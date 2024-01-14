@@ -40,17 +40,6 @@ impl App {
         result
     }
 
-    pub fn get_selected_item(&mut self) -> (&mut Category, Option<LibraryItem>) {
-        let (category, remainder) = self.get_selected_category();
-        if remainder == 0 {
-            (category, None)
-        } else {
-            let index = category.counter.selected();
-            let doc = category.items[index];
-            (category, Some(doc))
-        }
-    }
-
     pub fn left(&mut self) {
         self.depth = self.depth.saturating_sub(1);
     }
@@ -60,55 +49,32 @@ impl App {
     }
 
     pub fn next(&mut self) {
-        let (mut cat, _) = self.get_selected_category();
+        let (cat, _) = self.get_selected_category();
         cat.counter.next();
     }
 
     pub fn previous(&mut self) {
-        let (mut cat, _) = self.get_selected_category();
+        let (cat, _) = self.get_selected_category();
         cat.counter.previous();
     }
 
     pub fn home(&mut self) {
-        let (mut cat, _) = self.get_selected_category();
+        let (cat, _) = self.get_selected_category();
         cat.counter.set_selected(0);
     }
 
     pub fn end(&mut self) {
-        let (mut cat, _) = self.get_selected_category();
+        let (cat, _) = self.get_selected_category();
         let last = cat.counter.size();
         cat.counter.set_selected(last);
     }
 
     pub fn toggle(&mut self) {
-        let mut result = self.get_selected_item();
+        let result = self.get_selected_category();
         match result {
-            (mut cat, None) => cat.enabled = !cat.enabled,
-            (mut cat, Some(mut item)) => {
-                if cat.single_selection() {
-                    if !item.enabled() && item.can_download() {
-                        // If this item can be enabled, do
-                        // so and clear the rest of the
-                        // list
-                        cat.items.iter_mut().for_each(|item| {
-                            item.set_enabled(false);
-                        });
-                        item.set_enabled(true);
-                    } else if item.enabled() {
-                        // If this item was enabled, disable it and enable
-                        // the first item in the list we can enable
-                        item.set_enabled(false);
-                        for mut item in cat.items {
-                            if item.set_enabled(true) {
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    // Not a single selection list, toggle the item
-                    let new_state = !item.enabled();
-                    item.set_enabled(new_state);
-                }
+            (cat, 0) => cat.enabled = !cat.enabled,
+            (cat, _) => {
+                cat.toggle_selected_item();
             }
         }
     }

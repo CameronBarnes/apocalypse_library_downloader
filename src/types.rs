@@ -83,7 +83,7 @@ impl LibraryItem {
 
         let name = self.name();
         let size = self.human_readable_size();
-        let item = ListItem::new(format!("{name}:  {size}"));
+        let item = ListItem::new(format!("{name}:  {size}").to_string());
         let mut style = Style::default();
         if !self.enabled() {
             style = style.add_modifier(Modifier::DIM);
@@ -113,6 +113,7 @@ pub struct Document {
 }
 
 impl Document {
+    #[allow(unused)]
     pub fn new(name: String, url: String, size: u64, d_type: DownloadType) -> Self {
         let enabled = d_type != DownloadType::Rsync || !crate::IS_WINDOWS;
         Document{name, url, size, download_type: d_type, enabled}
@@ -218,14 +219,47 @@ impl Category {
             panic!("Shouldnt ever happen")
         } else if depth == 1 {
             (self, 1)
-        } else {
-            let index = self.counter.selected();
-            let result = self.items[index];
-            match result {
-                LibraryItem::Document(_) => (self, depth),
-                LibraryItem::Category(mut cat) => cat.get_selected_category(depth - 1),
+        } else if self.is_selected_category() {
+            match &mut self.items[self.counter.selected()] {
+                LibraryItem::Document(_) => unreachable!(),
+                LibraryItem::Category(cat) => cat.get_selected_category(depth - 1),
             }
+        } else {
+            (self, depth)
         }
 
+    }
+
+    pub fn is_selected_category(&self) -> bool {
+        let index = self.counter.clone().selected();
+        match &self.items[index] {
+            LibraryItem::Document(_) => false,
+            LibraryItem::Category(_) => true,
+        }
+    }
+
+    pub fn toggle_selected_item(&mut self) {
+        let single_selection = self.single_selection();
+        let index = self.counter.selected();
+        let item = &self.items[index];
+        let (enabled, can_download) = (item.enabled(), item.can_download());
+        if single_selection { // Only one item can be enabled at a time
+            if !enabled && can_download { // Item can be enabled, do so and disable
+                                                        // all other items
+                self.items.iter_mut().for_each(|item| {item.set_enabled(false);});
+                self.items[index].set_enabled(true);
+            } else if item.enabled() { // Item is enabled, disable it and enable the first
+                                       // downloadable item
+                self.items[index].set_enabled(false);
+                for item in &mut self.items {
+                    if item.can_download() {
+                        item.set_enabled(true);
+                        break;
+                    }
+                }
+            }
+        } else { // Not single selection, just toggle the item
+            self.items[index].set_enabled(!enabled);
+        }
     }
 }

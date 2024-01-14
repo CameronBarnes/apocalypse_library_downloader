@@ -1,16 +1,16 @@
 use ratatui::{
     prelude::*,
     widgets::{
-        block::Title, Block, Borders, Clear, List, ListItem, ListState, Padding, Paragraph,
-        Scrollbar, ScrollbarOrientation::VerticalRight, ScrollbarState, Wrap,
+        block::Title, Block, Borders, List, ListItem, ListState, Paragraph,
+        Scrollbar, ScrollbarOrientation::VerticalRight, ScrollbarState,
     },
 };
 
-use crate::types::LibraryItem;
+use crate::types::{LibraryItem, Category};
 
 use super::app::App;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StatefulListCounter {
     state: ListState,
     size: usize,
@@ -95,16 +95,82 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     .split(popup_layout[1])[1]
 }
 
-fn list_from_library_items(name: String, items: &Vec<LibraryItem>) -> List {
-    let items: Vec<ListItem> = items.iter().map(|item| item.as_list_item()).collect();
-    List::new(items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(Title::from(name).alignment(Alignment::Left)),
-        )
-        .highlight_style(Style::new().reversed())
-        .highlight_symbol(">> ")
+fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>) -> List {
+    match items {
+        Some(items) => {
+            let items: Vec<ListItem> = items.iter().map(|item| item.as_list_item()).collect();
+            List::new(items)
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(Title::from(name).alignment(Alignment::Left)),
+                )
+                .highlight_style(Style::new().reversed())
+                .highlight_symbol(">> ")
+        },
+        None => {
+            let empty: Vec<ListItem> = Vec::new();
+            List::new(empty)
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(Title::from(name).alignment(Alignment::Left)),
+                )
+                .highlight_style(Style::new().reversed())
+                .highlight_symbol(">> ")
+        }
+    } 
+}
+
+fn get_list_from_category_selected(category: &Category) -> (List, StatefulListCounter) {
+    if category.items.is_empty() {
+        return (list_from_library_items(category.name().to_string(), None), StatefulListCounter::default())
+    }
+    let index = category.counter.clone().selected();
+    let item = &category.items[index];
+    match item {
+        LibraryItem::Document(_) => {
+            (list_from_library_items(category.name().to_string(), None), StatefulListCounter::default())
+        },
+        LibraryItem::Category(cat) => {
+            (list_from_library_items(category.name().to_string(), Some(&cat.items)), cat.counter.clone())
+        },
+    }
+}
+
+fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, StatefulListCounter) {
+
+    let result = app.get_selected_category();
+    match result {
+        (cat, 0) => {
+            let state = cat.counter.clone();
+            let first = list_from_library_items(cat.name().to_string(), Some(&cat.items));
+            let (second, second_state) = get_list_from_category_selected(&*cat);
+            (first, state,
+            second, second_state)
+        },
+        (parent, _) => {
+            let index = parent.counter.selected();
+            let item = &parent.items[index];
+            match item {
+                LibraryItem::Document(_) => {
+                    let state = parent.counter.clone();
+                    let name = parent.name().to_string();
+                    let first = list_from_library_items(name, Some(&parent.items));
+                    let (second, second_state) = get_list_from_category_selected(&*parent);
+                    (first, state,
+                    second, second_state)
+                },
+                LibraryItem::Category(cat) => {
+                    let state = cat.counter.clone();
+                    let (second, second_state) = get_list_from_category_selected(cat);
+                    (list_from_library_items(parent.name().to_string(), Some(&cat.items)), state,
+                    second, second_state)
+                },
+            }
+        }
+    }
+
 }
 
 pub fn render(app: &mut App, f: &mut Frame) {
@@ -125,54 +191,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
     .split(vertical[2]);
 
     // Get all the stuff we actually want to render, and the information to do so
-    let selected = app.get_selected_item();
-    //TODO: Add comments to this is less of a mess, or at least a more understandable mess
-    let (first, mut first_state, second, mut second_state) = match selected {
-        (cat, None) => {
-            let index = cat.counter.selected();
-            let item = &cat.items[index];
-            let (second, state): (&Vec<LibraryItem>, &StatefulListCounter) = match item {
-                LibraryItem::Document(_) => (Vec::new(), StatefulListCounter::default()),
-                LibraryItem::Category(cat) => (&cat.items, &cat.counter),
-            };
-            (
-                list_from_library_items(cat.name().to_string(), &cat.items),
-                cat.counter,
-                list_from_library_items(item.name().to_string(), &second),
-                state,
-            )
-        }
-        (parent, Some(selected)) => match selected {
-            LibraryItem::Document(_) => {
-                let index = parent.counter.selected();
-                let item = &parent.items[index];
-                let (second, state): (&Vec<LibraryItem>, &StatefulListCounter) = match item {
-                    LibraryItem::Document(_) => (Vec::new(), StatefulListCounter::default()),
-                    LibraryItem::Category(cat) => (&cat.items, &cat.counter),
-                };
-                (
-                    list_from_library_items(parent.name().to_string(), &parent.items),
-                    parent.counter,
-                    list_from_library_items(item.name().to_string(), &second),
-                    state,
-                )
-            }
-            LibraryItem::Category(mut cat) => {
-                let index = cat.counter.selected();
-                let item = &cat.items[index];
-                let (second, state): (&Vec<LibraryItem>, &StatefulListCounter) = match item {
-                    LibraryItem::Document(_) => (Vec::new(), StatefulListCounter::default()),
-                    LibraryItem::Category(cat) => (&cat.items, &cat.counter),
-                };
-                (
-                    list_from_library_items(cat.name().to_string(), &cat.items),
-                    cat.counter,
-                    list_from_library_items(item.name().to_string(), &second),
-                    state,
-                )
-            }
-        },
-    };
+    let (first, mut first_state, second, mut second_state) = get_lists_from_app(app);
 
     // Render the first list
     f.render_stateful_widget(first, horizontal[0], &mut first_state.state);

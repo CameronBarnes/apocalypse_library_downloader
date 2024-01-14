@@ -15,8 +15,11 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             KeyCode::Down => app.next(),
             KeyCode::Left => app.left(),
             KeyCode::Right => app.right(),
+            KeyCode::Home => app.home(),
+            KeyCode::End => app.end(),
             KeyCode::Char(' ') => app.toggle(),
             KeyCode::Enter => app.download = true,
+            _ => {},
         }
     }
 }

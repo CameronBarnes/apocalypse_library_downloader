@@ -63,7 +63,7 @@ fn main() -> Result<()> {
         tui.draw(&mut app)?;
 
         match tui.events.next()? {
-            term::event::Event::Tick => {}
+            term::event::Event::Tick => app.tick(),
             term::event::Event::Key(key_event) => update(&mut app, key_event),
             term::event::Event::Mouse(_) => {}
             term::event::Event::Resize(_, _) => {}
@@ -77,10 +77,12 @@ fn main() -> Result<()> {
 
     // Download stuff
     let path = args.out_path;
-    download::setup_folder(&path)?;
-    app.category.items.iter().for_each(|item| {
-        download::download_item(&path, item, args.prefer_http).unwrap(); // Ignore for now
-    });
+    if app.download {
+        download::setup_folder(&path)?;
+        app.category.items.iter().for_each(|item| {
+            download::download_item(&path, item, args.prefer_http).unwrap(); // Ignore for now
+        });
+    }
 
     Ok(())
 }
