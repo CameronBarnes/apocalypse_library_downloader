@@ -1,4 +1,5 @@
 use humansize::WINDOWS;
+use ratatui::{widgets::ListItem, style::{Style, Modifier}};
 use serde::Deserialize;
 
 use crate::term::ui::StatefulListCounter;
@@ -26,6 +27,13 @@ impl LibraryItem {
                     cat.size(false)
                 }
             },
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            LibraryItem::Document(doc) => doc.name(),
+            LibraryItem::Category(cat) => cat.name(),
         }
     }
 
@@ -69,6 +77,22 @@ impl LibraryItem {
             LibraryItem::Document(doc) => doc.can_download(),
             LibraryItem::Category(cat) => cat.can_download(),
         }
+    }
+
+    pub fn as_list_item(&self) -> ListItem {
+
+        let name = self.name();
+        let size = self.human_readable_size();
+        let item = ListItem::new(format!("{name}:  {size}"));
+        let mut style = Style::default();
+        if !self.enabled() {
+            style = style.add_modifier(Modifier::DIM);
+        }
+        if !self.can_download() {
+            style = style.add_modifier(Modifier::CROSSED_OUT);
+        }
+        item.style(style)
+
     }
 }
 
@@ -186,5 +210,22 @@ impl Category {
 
     pub fn human_readable_size(&self) -> String {
         humansize::format_size(self.size(true), WINDOWS)
+    }
+
+    pub fn get_selected_category(&mut self, depth: usize) -> (&mut Category, usize) {
+
+        if depth == 0 {
+            panic!("Shouldnt ever happen")
+        } else if depth == 1 {
+            (self, 1)
+        } else {
+            let index = self.counter.selected();
+            let result = self.items[index];
+            match result {
+                LibraryItem::Document(_) => (self, depth),
+                LibraryItem::Category(mut cat) => cat.get_selected_category(depth - 1),
+            }
+        }
+
     }
 }

@@ -1,14 +1,14 @@
-mod term;
 mod download;
-mod types;
 mod parsing;
+mod term;
+mod types;
 
-use std::{path::Path, env};
+use std::{env, path::Path};
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use term::{event::EventHandler, tui::Tui};
+use term::{app::App, event::EventHandler, tui::Tui, update::update};
 
 static IS_WINDOWS: bool = cfg!(windows);
 
@@ -27,7 +27,6 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-
     let args = Args::parse();
 
     // Validate the plugin path
@@ -39,14 +38,18 @@ fn main() -> Result<()> {
         if !path.exists() {
             return Err(anyhow!("Plugin path: {} does not exist!", args.plugin_path));
         } else if !path.is_dir() {
-            return Err(anyhow!("Plugin path: {} is not a directory", args.plugin_path));
+            return Err(anyhow!(
+                "Plugin path: {} is not a directory",
+                args.plugin_path
+            ));
         }
     }
-    
+
     // Get library index
     let library = parsing::load_library(path, args.direct_json)?;
 
     // Build app object
+    let mut app = App::new(library);
 
     // Init term ui
     let backend = CrosstermBackend::new(std::io::stderr());
@@ -56,17 +59,28 @@ fn main() -> Result<()> {
     tui.enter()?;
 
     // Do man program loop
-    
+    while !app.should_quit {
+        tui.draw(&mut app)?;
+
+        match tui.events.next()? {
+            term::event::Event::Tick => {}
+            term::event::Event::Key(key_event) => update(&mut app, key_event),
+            term::event::Event::Mouse(_) => {}
+            term::event::Event::Resize(_, _) => {}
+            term::event::Event::FocusGained => {}
+            term::event::Event::FocusLost => {}
+        }
+    }
+
     // Close down the term ui stuff cleanly
     tui.exit()?;
 
     // Download stuff
     let path = args.out_path;
     download::setup_folder(&path)?;
-    library.iter().for_each(|cat| {
-        download::download_category(&path, cat, args.prefer_http).unwrap(); // Ignore for now
+    app.category.items.iter().for_each(|item| {
+        download::download_item(&path, item, args.prefer_http).unwrap(); // Ignore for now
     });
 
     Ok(())
-
 }

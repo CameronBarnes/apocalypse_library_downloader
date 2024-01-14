@@ -1,11 +1,12 @@
-use std::{path::Path, fs, process::Command};
+use std::{fs, path::Path, process::Command};
 
-use crate::types::Category;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 
-pub fn load_library(path: &Path, direct_json: bool) -> Result<Vec<Category>> {
+use crate::types::LibraryItem;
 
-    let mut categories: Vec<Category> = Vec::new();
+pub fn load_library(path: &Path, direct_json: bool) -> Result<Vec<LibraryItem>> {
+    let mut categories: Vec<LibraryItem> = Vec::new(); //TODO: allow merging of categories with the
+                                                       //same name and parent
 
     if direct_json {
         for file in path.read_dir().unwrap() {
@@ -14,7 +15,9 @@ pub fn load_library(path: &Path, direct_json: bool) -> Result<Vec<Category>> {
                 continue;
             }
             if file.path().ends_with(".json") {
-                categories.push(serde_json::from_str(&fs::read_to_string(file.path()).unwrap()).unwrap());
+                for line in fs::read_to_string(file.path()).unwrap().lines() {
+                    categories.push(serde_json::from_str(line)?);
+                }
             }
         }
     } else {
@@ -25,12 +28,18 @@ pub fn load_library(path: &Path, direct_json: bool) -> Result<Vec<Category>> {
             }
             let output = Command::new(file.path()).output()?;
             if !output.status.success() {
-                return Err(anyhow!("Command: {:?} failed with output: {}{}", file.file_name(), String::from_utf8(output.stdout).unwrap(), String::from_utf8(output.stderr).unwrap()));
+                return Err(anyhow!(
+                    "Command: {:?} failed with output: {}{}",
+                    file.file_name(),
+                    String::from_utf8(output.stdout).unwrap(),
+                    String::from_utf8(output.stderr).unwrap()
+                ));
             }
-            categories.push(serde_json::from_str(&String::from_utf8(output.stdout).unwrap())?);
+            for line in String::from_utf8(output.stdout).unwrap().lines() {
+                categories.push(serde_json::from_str(line)?);
+            }
         }
     }
 
     Ok(categories)
-    
 }
