@@ -7,7 +7,7 @@ pub enum LibraryItem {
 }
 
 impl LibraryItem {
-    pub fn size(&self, enabled_only: bool) -> usize {
+    pub fn size(&self, enabled_only: bool) -> u64 {
         match self {
             LibraryItem::Document(doc) => {
                 if enabled_only {
@@ -80,13 +80,13 @@ pub enum DownloadType {
 pub struct Document {
     name: String,
     url: String,
-    size: usize,
+    size: u64,
     download_type: DownloadType,
     pub enabled: bool,
 }
 
 impl Document {
-    pub fn new(name: String, url: String, size: usize, d_type: DownloadType) -> Self {
+    pub fn new(name: String, url: String, size: u64, d_type: DownloadType) -> Self {
         let enabled = d_type != DownloadType::Rsync || !crate::IS_WINDOWS;
         Document{name, url, size, download_type: d_type, enabled}
     }
@@ -99,7 +99,7 @@ impl Document {
         &self.url
     }
 
-    pub fn size(&self) -> usize {
+    pub fn size(&self) -> u64 {
         self.size
     }
 
@@ -107,7 +107,7 @@ impl Document {
         &self.download_type
     }
 
-    pub fn enabled_size(&self) -> usize {
+    pub fn enabled_size(&self) -> u64 {
         if self.enabled {
             self.size
         } else {
@@ -148,11 +148,11 @@ impl Category {
         &self.name
     }
 
-    pub fn size(&self, enabled_only: bool) -> usize {
+    pub fn size(&self, enabled_only: bool) -> u64 {
         self.items.iter().map(|item| item.size(enabled_only)).sum()
     }
 
-    pub fn enabled_size(&self) -> usize {
+    pub fn enabled_size(&self) -> u64 {
         if self.enabled {
             self.size(true)
         } else {
