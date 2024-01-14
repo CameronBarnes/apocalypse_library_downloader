@@ -28,16 +28,7 @@ impl App {
     }
 
     pub fn get_selected_category(&mut self) -> (&mut Category, usize) {
-        let result = if self.depth == 0 {
-            (&mut self.category, 0)
-        } else {
-            self.category.get_selected_category(self.depth)
-        };
-        match result {
-            (_, 0) | (_, 1) => {}
-            (_, num) => self.depth = num - 1,
-        }
-        result
+        self.category.get_selected_category(self.depth)
     }
 
     pub fn left(&mut self) {
@@ -46,21 +37,35 @@ impl App {
 
     pub fn right(&mut self) {
         self.depth += 1;
+        let (_, depth) = self.get_selected_category();
+        self.depth -= depth.saturating_sub(1);
     }
 
     pub fn next(&mut self) {
-        let (cat, _) = self.get_selected_category();
-        cat.counter.next();
+        let (cat, depth) = self.get_selected_category();
+        if depth == 0 {
+            cat.counter.next();
+        } else {
+            cat.get_selected_category(2).0.counter.next();
+        }
     }
 
     pub fn previous(&mut self) {
-        let (cat, _) = self.get_selected_category();
-        cat.counter.previous();
+        let (cat, depth) = self.get_selected_category();
+        if depth == 0 {
+            cat.counter.previous();
+        } else {
+            cat.get_selected_category(2).0.counter.previous();
+        }
     }
 
     pub fn home(&mut self) {
-        let (cat, _) = self.get_selected_category();
-        cat.counter.set_selected(0);
+        let (cat, depth) = self.get_selected_category();
+        if depth == 0 {
+            cat.counter.set_selected(0);
+        } else {
+            cat.get_selected_category(2).0.counter.set_selected(0);
+        }
     }
 
     pub fn end(&mut self) {

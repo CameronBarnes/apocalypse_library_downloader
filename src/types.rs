@@ -177,6 +177,7 @@ impl Category {
 
     pub fn fix_counter(&mut self) {
         self.counter = StatefulListCounter::new(self.items.len());
+        self.counter.selected();
         for item in &mut self.items {
             match item {
                 LibraryItem::Document(_) => {},
@@ -216,16 +217,14 @@ impl Category {
     pub fn get_selected_category(&mut self, depth: usize) -> (&mut Category, usize) {
 
         if depth == 0 {
-            panic!("Shouldnt ever happen")
-        } else if depth == 1 {
-            (self, 1)
+            (self, depth)
         } else if self.is_selected_category() {
             match &mut self.items[self.counter.selected()] {
                 LibraryItem::Document(_) => unreachable!(),
                 LibraryItem::Category(cat) => cat.get_selected_category(depth - 1),
             }
         } else {
-            (self, depth)
+            (self, depth + 1)
         }
 
     }

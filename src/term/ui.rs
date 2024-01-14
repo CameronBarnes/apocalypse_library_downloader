@@ -1,3 +1,5 @@
+use core::panic;
+
 use ratatui::{
     prelude::*,
     widgets::{
@@ -133,12 +135,12 @@ fn get_list_from_category_selected(category: &Category) -> (List, StatefulListCo
             (list_from_library_items(category.name().to_string(), None), StatefulListCounter::default())
         },
         LibraryItem::Category(cat) => {
-            (list_from_library_items(category.name().to_string(), Some(&cat.items)), cat.counter.clone())
+            (list_from_library_items(cat.name().to_string(), Some(&cat.items)), cat.counter.clone())
         },
     }
 }
 
-fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, StatefulListCounter) {
+fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, StatefulListCounter, bool) {
 
     let result = app.get_selected_category();
     match result {
@@ -147,7 +149,7 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
             let first = list_from_library_items(cat.name().to_string(), Some(&cat.items));
             let (second, second_state) = get_list_from_category_selected(&*cat);
             (first, state,
-            second, second_state)
+            second, second_state, false)
         },
         (parent, _) => {
             let index = parent.counter.selected();
@@ -159,13 +161,13 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
                     let first = list_from_library_items(name, Some(&parent.items));
                     let (second, second_state) = get_list_from_category_selected(&*parent);
                     (first, state,
-                    second, second_state)
+                    second, second_state, true)
                 },
                 LibraryItem::Category(cat) => {
                     let state = cat.counter.clone();
                     let (second, second_state) = get_list_from_category_selected(cat);
-                    (list_from_library_items(parent.name().to_string(), Some(&cat.items)), state,
-                    second, second_state)
+                    (list_from_library_items(cat.name().to_string(), Some(&cat.items)), state,
+                    second, second_state, true)
                 },
             }
         }
@@ -191,7 +193,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
     .split(vertical[2]);
 
     // Get all the stuff we actually want to render, and the information to do so
-    let (first, mut first_state, second, mut second_state) = get_lists_from_app(app);
+    let (first, mut first_state, second, mut second_state, check) = get_lists_from_app(app);
 
     // Render the first list
     f.render_stateful_widget(first, horizontal[0], &mut first_state.state);
@@ -223,6 +225,15 @@ pub fn render(app: &mut App, f: &mut Frame) {
             .bold()
             .alignment(Alignment::Center),
         vertical[0],
+    );
+
+    // Render help //TODO: actually make this render help instead of debug text
+    let name = app.get_selected_category().0.name().to_string();
+    f.render_widget(
+        Paragraph::new(format!("Depth: {}, check: {check}, name: {name}", app.depth))
+            .bold()
+            .alignment(Alignment::Center),
+        vertical[1],
     );
 
     // Render the total
