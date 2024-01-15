@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use humansize::WINDOWS;
 use ratatui::{widgets::ListItem, style::{Style, Modifier}};
 use serde::Deserialize;
@@ -216,7 +218,7 @@ impl Category {
 
     pub fn get_selected_category(&mut self, depth: usize) -> (&mut Category, usize) {
 
-        if depth == 0 {
+        if depth == 0 || self.is_selected_last() {
             (self, depth)
         } else if self.is_selected_category() {
             match &mut self.items[self.counter.selected()] {
@@ -234,6 +236,14 @@ impl Category {
         match &self.items[index] {
             LibraryItem::Document(_) => false,
             LibraryItem::Category(_) => true,
+        }
+    }
+
+    pub fn is_selected_last(&self) -> bool {
+        let index = self.counter.clone().selected();
+        match &self.items[index] {
+            LibraryItem::Document(_) => false,
+            LibraryItem::Category(cat) => !cat.is_selected_category(),
         }
     }
 

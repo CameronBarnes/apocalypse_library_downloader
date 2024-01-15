@@ -43,43 +43,70 @@ impl App {
 
     pub fn next(&mut self) {
         let (cat, depth) = self.get_selected_category();
-        if depth == 0 {
+        if !cat.is_selected_last() || depth == 0 {
             cat.counter.next();
         } else {
-            cat.get_selected_category(2).0.counter.next();
+            let index = cat.counter.selected();
+            match &mut cat.items[index] {
+                LibraryItem::Document(_) => unreachable!(),
+                LibraryItem::Category(cat) => cat.counter.next(),
+            }
         }
     }
 
     pub fn previous(&mut self) {
         let (cat, depth) = self.get_selected_category();
-        if depth == 0 {
+        if !cat.is_selected_last() || depth == 0 {
             cat.counter.previous();
         } else {
-            cat.get_selected_category(2).0.counter.previous();
+            let index = cat.counter.selected();
+            match &mut cat.items[index] {
+                LibraryItem::Document(_) => unreachable!(),
+                LibraryItem::Category(cat) => cat.counter.previous(),
+            }
         }
     }
 
     pub fn home(&mut self) {
         let (cat, depth) = self.get_selected_category();
-        if depth == 0 {
+        if !cat.is_selected_last() || depth == 0 {
             cat.counter.set_selected(0);
         } else {
-            cat.get_selected_category(2).0.counter.set_selected(0);
+            let index = cat.counter.selected();
+            match &mut cat.items[index] {
+                LibraryItem::Document(_) => unreachable!(),
+                LibraryItem::Category(cat) => cat.counter.set_selected(0),
+            }
         }
     }
 
     pub fn end(&mut self) {
-        let (cat, _) = self.get_selected_category();
-        let last = cat.counter.size();
-        cat.counter.set_selected(last);
+        let (cat, depth) = self.get_selected_category();
+        if !cat.is_selected_last() || depth == 0 {
+            let max = cat.counter.size();
+            cat.counter.set_selected(max - 1);
+        } else {
+            let index = cat.counter.selected();
+            match &mut cat.items[index] {
+                LibraryItem::Document(_) => unreachable!(),
+                LibraryItem::Category(cat) => {
+                    let max = cat.counter.size();
+                    cat.counter.set_selected(max - 1);
+                },
+            }
+        }
     }
 
     pub fn toggle(&mut self) {
         let result = self.get_selected_category();
         match result {
-            (cat, 0) => cat.enabled = !cat.enabled,
+            (cat, 0) => cat.toggle_selected_item(),
             (cat, _) => {
-                cat.toggle_selected_item();
+                let index = cat.counter.selected();
+                match &mut cat.items[index] {
+                    LibraryItem::Document(_) => unreachable!(),
+                    LibraryItem::Category(cat) => cat.toggle_selected_item(),
+                }
             }
         }
     }

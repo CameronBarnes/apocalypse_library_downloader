@@ -1,5 +1,3 @@
-use core::panic;
-
 use ratatui::{
     prelude::*,
     widgets::{
@@ -140,7 +138,7 @@ fn get_list_from_category_selected(category: &Category) -> (List, StatefulListCo
     }
 }
 
-fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, StatefulListCounter, bool) {
+fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, StatefulListCounter, String) {
 
     let result = app.get_selected_category();
     match result {
@@ -149,26 +147,40 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
             let first = list_from_library_items(cat.name().to_string(), Some(&cat.items));
             let (second, second_state) = get_list_from_category_selected(&*cat);
             (first, state,
-            second, second_state, false)
+            second, second_state, String::from("0"))
         },
-        (parent, _) => {
+        (parent, depth) => {
             let index = parent.counter.selected();
             let item = &parent.items[index];
-            match item {
-                LibraryItem::Document(_) => {
-                    let state = parent.counter.clone();
-                    let name = parent.name().to_string();
-                    let first = list_from_library_items(name, Some(&parent.items));
-                    let (second, second_state) = get_list_from_category_selected(&*parent);
-                    (first, state,
-                    second, second_state, true)
-                },
-                LibraryItem::Category(cat) => {
-                    let state = cat.counter.clone();
-                    let (second, second_state) = get_list_from_category_selected(cat);
-                    (list_from_library_items(cat.name().to_string(), Some(&cat.items)), state,
-                    second, second_state, true)
-                },
+            if parent.is_selected_last() {
+                match item {
+                    LibraryItem::Document(_) => unreachable!(),
+                    LibraryItem::Category(_) => {
+                        let state = parent.counter.clone();
+                        let name = parent.name().to_string();
+                        let first = list_from_library_items(name, Some(&parent.items));
+                        let (second, second_state) = get_list_from_category_selected(&*parent);
+                        (first, state,
+                        second, second_state, format!("Last: depth: {depth}"))
+                    },
+                }
+            } else {
+                match item {
+                    LibraryItem::Document(_) => {
+                        let state = parent.counter.clone();
+                        let name = parent.name().to_string();
+                        let first = list_from_library_items(name, Some(&parent.items));
+                        let (second, second_state) = get_list_from_category_selected(&*parent);
+                        (first, state,
+                        second, second_state, format!("Doc: depth: {depth}"))
+                    },
+                    LibraryItem::Category(cat) => {
+                        let state = cat.counter.clone();
+                        let (second, second_state) = get_list_from_category_selected(cat);
+                        (list_from_library_items(cat.name().to_string(), Some(&cat.items)), state,
+                        second, second_state, format!("Cat: depth: {depth}"))
+                    },
+                }
             }
         }
     }
