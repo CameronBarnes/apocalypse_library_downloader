@@ -12,7 +12,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use term::{app::App, event::EventHandler, tui::Tui, update::update};
 
 static IS_WINDOWS: bool = cfg!(windows);
-static HAS_RSYNC: Lazy<bool> = Lazy::new(|| download::check_for_rsync());
+static HAS_RSYNC: Lazy<bool> = Lazy::new(download::check_for_rsync);
 
 #[derive(Parser, Debug)]
 #[command(author = "Cameron Barnes", version = "1.0", about = None, long_about = None)]
