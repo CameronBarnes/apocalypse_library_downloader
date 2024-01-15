@@ -111,6 +111,20 @@ impl App {
         }
     }
 
+    pub fn toggle_all(&mut self) {
+        let result = self.get_selected_category();
+        match result {
+            (cat, 0) => cat.toggle_all_items(),
+            (cat, _) => {
+                let index = cat.counter.selected();
+                match &mut cat.items[index] {
+                    LibraryItem::Document(_) => unreachable!(),
+                    LibraryItem::Category(cat) => cat.toggle_all_items(),
+                }
+            }
+        }
+    }
+
     pub fn tick(&self) {}
 
     pub fn quit(&mut self) {

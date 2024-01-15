@@ -147,7 +147,7 @@ impl Document {
 
     /// In cases such as a rsync Document on a windows system we cant download it
     pub fn can_download(&self) -> bool {
-        self.download_type != DownloadType::Rsync || !crate::IS_WINDOWS
+        self.download_type != DownloadType::Rsync || (!crate::IS_WINDOWS && *crate::HAS_RSYNC)
     }
 
     pub fn human_readable_size(&self) -> String {
@@ -244,6 +244,15 @@ impl Category {
         match &self.items[index] {
             LibraryItem::Document(_) => false,
             LibraryItem::Category(cat) => !cat.is_selected_category(),
+        }
+    }
+
+    pub fn toggle_all_items(&mut self) {
+        if !self.single_selection() {
+            self.items.iter_mut().for_each(|item| {
+                let state = !item.enabled();
+                item.set_enabled(state);
+            });
         }
     }
 

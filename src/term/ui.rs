@@ -2,7 +2,7 @@ use ratatui::{
     prelude::*,
     widgets::{
         block::Title, Block, Borders, List, ListItem, ListState, Paragraph,
-        Scrollbar, ScrollbarOrientation::VerticalRight, ScrollbarState,
+        Scrollbar, ScrollbarOrientation::VerticalRight, ScrollbarState, Clear, Wrap, Padding,
     },
 };
 
@@ -256,4 +256,25 @@ pub fn render(app: &mut App, f: &mut Frame) {
             .alignment(Alignment::Center),
         vertical[3],
     );
+
+    if app.download {
+        let area = centered_rect(60, 60, f.size());
+        f.render_widget(Clear, area); // Clear the area so we can render over it
+        let paragraph = Paragraph::new(format!("{total}\n\nPress ESC or ctrl-C to go back\nENTER to download files now"))
+            .bold()
+            .alignment(Alignment::Center)
+            .wrap(Wrap{trim: false})
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Download")
+                    .title_alignment(Alignment::Center)
+                    .title_style(Style::default().bold())
+                    .padding(Padding::new(5, 10, 1, 2))
+            );
+
+        // Render
+        f.render_widget(paragraph, area);
+    }
+
 }

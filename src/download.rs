@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::Write,
-    path::Path,
+    path::Path, process::Command,
 };
 
 use anyhow::{anyhow, Result};
@@ -94,6 +94,20 @@ pub fn handle_download_file(url: &str, path_str: &str, overwrite: bool) -> Resul
     }
 }
 
+fn handle_download_rsync(url: &str, path_str: &str) -> Result<()> {
+
+    Command::new("rsync")
+        .args(["-rlptH", "--safe-links", "--delete-delay", "--delay-updates", url, path_str])
+        .output()?;
+
+    Ok(())
+
+}
+
+pub fn check_for_rsync() -> bool {
+    Command::new("which").arg("rsync").output().unwrap().status.success()
+}
+
 pub fn download_item(path: &str, item: &LibraryItem, prefer_http: bool) -> Result<()> {
     match item {
         LibraryItem::Document(doc) => {
@@ -103,14 +117,14 @@ pub fn download_item(path: &str, item: &LibraryItem, prefer_http: bool) -> Resul
                     handle_download_file(doc.url(), &path, false)
                 }
                 crate::types::DownloadType::Rsync => {
-                    todo!() //TODO: handle rsync download
+                    handle_download_rsync(doc.url(), path)
                 }
                 crate::types::DownloadType::Either => {
-                    if crate::IS_WINDOWS || prefer_http {
+                    if crate::IS_WINDOWS || !*crate::HAS_RSYNC || prefer_http {
                         let path = format!("{path}/{}", doc.url().split('/').last().unwrap());
                         handle_download_file(doc.url(), &path, false)
                     } else {
-                        todo!() //TODO: Handle rsync download
+                        handle_download_rsync(doc.url(), path)
                     }
                 }
             }

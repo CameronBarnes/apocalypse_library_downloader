@@ -19,6 +19,18 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             KeyCode::End => app.end(),
             KeyCode::Char(' ') => app.toggle(),
             KeyCode::Enter => app.download = true,
+            KeyCode::Tab => app.toggle_all(),
+            _ => {},
+        }
+    } else {
+        match key_event.code {
+            KeyCode::Esc | KeyCode::Char('q') => app.quit(),
+            KeyCode::Char('c') | KeyCode::Char('C') => {
+                if key_event.modifiers == KeyModifiers::CONTROL {
+                    app.download = false;
+                }
+            },
+            KeyCode::Enter => app.quit(),
             _ => {},
         }
     }
