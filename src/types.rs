@@ -1,7 +1,8 @@
-use std::ops::Index;
-
 use humansize::WINDOWS;
-use ratatui::{widgets::ListItem, style::{Style, Modifier}};
+use ratatui::{
+    style::{Modifier, Style},
+    widgets::ListItem,
+};
 use serde::Deserialize;
 
 use crate::term::ui::StatefulListCounter;
@@ -21,14 +22,14 @@ impl LibraryItem {
                 } else {
                     doc.size()
                 }
-            },
+            }
             LibraryItem::Category(cat) => {
                 if enabled_only {
                     cat.enabled_size()
                 } else {
                     cat.size(false)
                 }
-            },
+            }
         }
     }
 
@@ -62,7 +63,7 @@ impl LibraryItem {
                     doc.enabled = false;
                 }
                 doc.enabled
-            },
+            }
             LibraryItem::Category(cat) => {
                 if cat.can_download() {
                     cat.enabled = enabled;
@@ -70,7 +71,7 @@ impl LibraryItem {
                     cat.enabled = false;
                 }
                 cat.enabled
-            },
+            }
         }
     }
 
@@ -82,7 +83,6 @@ impl LibraryItem {
     }
 
     pub fn as_list_item(&self) -> ListItem {
-
         let name = self.name();
         let size = self.human_readable_size();
         let item = ListItem::new(format!("{name}:  {size}").to_string());
@@ -94,7 +94,6 @@ impl LibraryItem {
             style = style.add_modifier(Modifier::CROSSED_OUT);
         }
         item.style(style)
-
     }
 }
 
@@ -118,7 +117,13 @@ impl Document {
     #[allow(unused)]
     pub fn new(name: String, url: String, size: u64, d_type: DownloadType) -> Self {
         let enabled = d_type != DownloadType::Rsync || !crate::IS_WINDOWS;
-        Document{name, url, size, download_type: d_type, enabled}
+        Document {
+            name,
+            url,
+            size,
+            download_type: d_type,
+            enabled,
+        }
     }
 
     pub fn name(&self) -> &str {
@@ -167,14 +172,21 @@ pub struct Category {
 
 impl Category {
     pub fn new(name: String, mut items: Vec<LibraryItem>, single_selection: bool) -> Self {
-        if single_selection { // Only one option can be enabled at a time with single selection
+        if single_selection {
+            // Only one option can be enabled at a time with single selection
             (1..items.len()).for_each(|i| {
                 items[i].set_enabled(false);
             });
         }
         let enabled = items.iter().any(LibraryItem::can_download);
-        let len =  items.len();
-        Category{name, items, enabled, single_selection, counter: StatefulListCounter::new(len)}
+        let len = items.len();
+        Category {
+            name,
+            items,
+            enabled,
+            single_selection,
+            counter: StatefulListCounter::new(len),
+        }
     }
 
     pub fn fix_counter(&mut self) {
@@ -182,7 +194,7 @@ impl Category {
         self.counter.selected();
         for item in &mut self.items {
             match item {
-                LibraryItem::Document(_) => {},
+                LibraryItem::Document(_) => {}
                 LibraryItem::Category(cat) => cat.fix_counter(),
             }
         }
@@ -217,7 +229,6 @@ impl Category {
     }
 
     pub fn get_selected_category(&mut self, depth: usize) -> (&mut Category, usize) {
-
         if depth == 0 || self.is_selected_last() {
             (self, depth)
         } else if self.is_selected_category() {
@@ -228,7 +239,6 @@ impl Category {
         } else {
             (self, depth + 1)
         }
-
     }
 
     pub fn is_selected_category(&self) -> bool {
@@ -261,13 +271,18 @@ impl Category {
         let index = self.counter.selected();
         let item = &self.items[index];
         let (enabled, can_download) = (item.enabled(), item.can_download());
-        if single_selection { // Only one item can be enabled at a time
-            if !enabled && can_download { // Item can be enabled, do so and disable
-                                                        // all other items
-                self.items.iter_mut().for_each(|item| {item.set_enabled(false);});
+        if single_selection {
+            // Only one item can be enabled at a time
+            if !enabled && can_download {
+                // Item can be enabled, do so and disable
+                // all other items
+                self.items.iter_mut().for_each(|item| {
+                    item.set_enabled(false);
+                });
                 self.items[index].set_enabled(true);
-            } else if item.enabled() { // Item is enabled, disable it and enable the first
-                                       // downloadable item
+            } else if item.enabled() {
+                // Item is enabled, disable it and enable the first
+                // downloadable item
                 self.items[index].set_enabled(false);
                 for item in &mut self.items {
                     if item.can_download() {
@@ -276,8 +291,35 @@ impl Category {
                     }
                 }
             }
-        } else { // Not single selection, just toggle the item
+        } else {
+            // Not single selection, just toggle the item
             self.items[index].set_enabled(!enabled);
+        }
+    }
+
+    pub fn add(&mut self, item: LibraryItem) {
+        match item {
+            LibraryItem::Document(_) => self.items.push(item),
+            LibraryItem::Category(category) => {
+                if let Some(merge) = self.items.iter_mut().find_map(|e| match e {
+                    LibraryItem::Document(_) => None,
+                    LibraryItem::Category(cat) => {
+                        if cat.name.eq_ignore_ascii_case(category.name()) {
+                            Some(cat)
+                        } else {
+                            None
+                        }
+                    }
+                }) {
+                    // End of condition, merge the two categories if their names match
+
+                    for item in category.items {
+                        merge.add(item);
+                    }
+                } else {
+                    self.items.push(LibraryItem::Category(category));
+                }
+            }
         }
     }
 }

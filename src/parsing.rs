@@ -3,11 +3,10 @@ use std::{fs, path::Path, process::Command};
 use anyhow::{anyhow, Result};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::types::LibraryItem;
+use crate::types::{Category, LibraryItem};
 
-pub fn load_library(path: &Path, direct_json: bool) -> Result<Vec<LibraryItem>> {
-    let mut categories: Vec<LibraryItem> = Vec::new(); //TODO: allow merging of categories with the
-                                                       //same name and parent
+pub fn load_library(path: &Path, direct_json: bool) -> Result<Category> {
+    let mut root = Category::new("Apocalypse Library".into(), vec![], false);
 
     if direct_json {
         let results: Vec<Vec<LibraryItem>> = path
@@ -39,10 +38,10 @@ pub fn load_library(path: &Path, direct_json: bool) -> Result<Vec<LibraryItem>> 
         results
             .into_iter()
             .flatten()
-            .for_each(|item| categories.push(item));
-        //categories.append(results);
+            .for_each(|item| root.add(item));
     } else {
         for file in path.read_dir().unwrap() {
+            // TODO: Make parallel
             let file = file.unwrap();
             let file_path = file.path();
             if file_path.is_dir() {
@@ -67,13 +66,16 @@ pub fn load_library(path: &Path, direct_json: bool) -> Result<Vec<LibraryItem>> 
             let str = String::from_utf8(output.stdout).unwrap();
             if str.contains('\n') {
                 for line in str.lines() {
-                    categories.push(serde_json::from_str(line)?);
+                    root.add(serde_json::from_str(line)?);
                 }
             } else {
-                categories.push(serde_json::from_str(&str)?);
+                root.add(serde_json::from_str(&str)?);
             }
         }
     }
 
-    Ok(categories)
+    root.fix_counter(); // Will recursively fix the list counter objects of all contained
+                        // categories
+
+    Ok(root)
 }

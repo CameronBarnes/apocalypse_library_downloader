@@ -9,16 +9,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(mut categories: Vec<LibraryItem>) -> Self {
-        categories
-            .iter_mut()
-            .flat_map(|item| match item {
-                LibraryItem::Document(_) => None,
-                LibraryItem::Category(cat) => Some(cat),
-            })
-            .for_each(|cat| cat.fix_counter());
-        let mut category = Category::new(String::from("Apocalypse Library"), categories, false);
-        category.fix_counter();
+    pub fn new(category: Category) -> Self {
         App {
             should_quit: false,
             category,
@@ -92,7 +83,7 @@ impl App {
                 LibraryItem::Category(cat) => {
                     let max = cat.counter.size();
                     cat.counter.set_selected(max - 1);
-                },
+                }
             }
         }
     }
