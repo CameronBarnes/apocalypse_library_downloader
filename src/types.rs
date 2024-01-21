@@ -7,7 +7,7 @@ use ratatui::{
 };
 use serde::Deserialize;
 
-use crate::term::{ui::StatefulListCounter, app::SortStyle};
+use crate::term::{app::SortStyle, ui::StatefulListCounter};
 
 #[derive(Debug, Deserialize)]
 pub enum LibraryItem {
@@ -85,7 +85,9 @@ impl LibraryItem {
             LibraryItem::Category(cat) => {
                 cat.enabled = cat.can_download();
                 if !cat.single_selection() {
-                    cat.items.iter_mut().for_each(|item| item.set_enabled_recursive());
+                    cat.items
+                        .iter_mut()
+                        .for_each(|item| item.set_enabled_recursive());
                 }
             }
         }
@@ -289,7 +291,8 @@ impl Category {
         }
     }
 
-    pub fn toggle_selected_item(&mut self) {        let single_selection = self.single_selection();
+    pub fn toggle_selected_item(&mut self) {
+        let single_selection = self.single_selection();
         let index = self.counter.selected();
         let item = &self.items[index];
         let (enabled, can_download) = (item.enabled(), item.can_download());
@@ -322,8 +325,9 @@ impl Category {
     pub fn sort(&mut self, style: SortStyle) {
         match style {
             SortStyle::Alphabetical => {
-                self.items.sort_unstable_by_key(|item| item.name().to_string());
-            },
+                self.items
+                    .sort_unstable_by_key(|item| item.name().to_string());
+            }
             SortStyle::Size => {
                 self.items.sort_unstable_by_key(|item| {
                     let size = match item {
@@ -332,7 +336,7 @@ impl Category {
                     };
                     Reverse(size)
                 });
-            },
+            }
         }
     }
 

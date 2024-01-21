@@ -1,12 +1,12 @@
 use ratatui::{
     prelude::*,
     widgets::{
-        block::Title, Block, Borders, List, ListItem, ListState, Paragraph,
-        Scrollbar, ScrollbarOrientation::VerticalRight, ScrollbarState, Clear, Wrap, Padding,
+        block::Title, Block, Borders, Clear, List, ListItem, ListState, Padding, Paragraph,
+        Scrollbar, ScrollbarOrientation::VerticalRight, ScrollbarState, Wrap,
     },
 };
 
-use crate::types::{LibraryItem, Category};
+use crate::types::{Category, LibraryItem};
 
 use super::app::App;
 
@@ -96,7 +96,9 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>, selected: bool) -> List {
-    let block = Block::default().borders(Borders::ALL).title(Title::from(name).alignment(Alignment::Left));
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(Title::from(name).alignment(Alignment::Left));
     let mut highlight_style = Style::new().reversed();
     if selected {
         highlight_style = highlight_style.light_cyan();
@@ -109,7 +111,7 @@ fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>, selec
                 .block(block)
                 .highlight_style(highlight_style)
                 .highlight_symbol(">> ")
-        },
+        }
         None => {
             let empty: Vec<ListItem> = Vec::new();
             List::new(empty)
@@ -117,36 +119,44 @@ fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>, selec
                 .highlight_style(highlight_style)
                 .highlight_symbol(">> ")
         }
-    } 
+    }
 }
 
-fn get_list_from_category_selected(category: &Category, selected: bool) -> (List, StatefulListCounter) {
+fn get_list_from_category_selected(
+    category: &Category,
+    selected: bool,
+) -> (List, StatefulListCounter) {
     if category.items.is_empty() {
-        return (list_from_library_items(category.name().to_string(), None, selected), StatefulListCounter::default())
+        return (
+            list_from_library_items(category.name().to_string(), None, selected),
+            StatefulListCounter::default(),
+        );
     }
     let index = category.counter.clone().selected();
     let item = &category.items[index];
     match item {
-        LibraryItem::Document(_) => {
-            (list_from_library_items(category.name().to_string(), None, selected), StatefulListCounter::default())
-        },
-        LibraryItem::Category(cat) => {
-            (list_from_library_items(cat.name().to_string(), Some(&cat.items), selected), cat.counter.clone())
-        },
+        LibraryItem::Document(_) => (
+            list_from_library_items(category.name().to_string(), None, selected),
+            StatefulListCounter::default(),
+        ),
+        LibraryItem::Category(cat) => (
+            list_from_library_items(cat.name().to_string(), Some(&cat.items), selected),
+            cat.counter.clone(),
+        ),
     }
 }
 
-fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, StatefulListCounter, String) {
-
+fn get_lists_from_app(
+    app: &mut App,
+) -> (List, StatefulListCounter, List, StatefulListCounter, String) {
     let result = app.get_selected_category();
     match result {
         (cat, 0) => {
             let state = cat.counter.clone();
             let first = list_from_library_items(cat.name().to_string(), Some(&cat.items), true);
             let (second, second_state) = get_list_from_category_selected(&*cat, false);
-            (first, state,
-            second, second_state, String::from("0"))
-        },
+            (first, state, second, second_state, String::from("0"))
+        }
         (parent, depth) => {
             let index = parent.counter.selected();
             let item = &parent.items[index];
@@ -157,10 +167,16 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
                         let state = parent.counter.clone();
                         let name = parent.name().to_string();
                         let first = list_from_library_items(name, Some(&parent.items), false);
-                        let (second, second_state) = get_list_from_category_selected(&*parent, true);
-                        (first, state,
-                        second, second_state, format!("Last: depth: {depth}"))
-                    },
+                        let (second, second_state) =
+                            get_list_from_category_selected(&*parent, true);
+                        (
+                            first,
+                            state,
+                            second,
+                            second_state,
+                            format!("Last: depth: {depth}"),
+                        )
+                    }
                 }
             } else {
                 match item {
@@ -168,21 +184,35 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
                         let state = parent.counter.clone();
                         let name = parent.name().to_string();
                         let first = list_from_library_items(name, Some(&parent.items), true);
-                        let (second, second_state) = get_list_from_category_selected(&*parent, false);
-                        (first, state,
-                        second, second_state, format!("Doc: depth: {depth}"))
-                    },
+                        let (second, second_state) =
+                            get_list_from_category_selected(&*parent, false);
+                        (
+                            first,
+                            state,
+                            second,
+                            second_state,
+                            format!("Doc: depth: {depth}"),
+                        )
+                    }
                     LibraryItem::Category(cat) => {
                         let state = cat.counter.clone();
                         let (second, second_state) = get_list_from_category_selected(cat, true);
-                        (list_from_library_items(cat.name().to_string(), Some(&cat.items), false), state,
-                        second, second_state, format!("Cat: depth: {depth}"))
-                    },
+                        (
+                            list_from_library_items(
+                                cat.name().to_string(),
+                                Some(&cat.items),
+                                false,
+                            ),
+                            state,
+                            second,
+                            second_state,
+                            format!("Cat: depth: {depth}"),
+                        )
+                    }
                 }
             }
         }
     }
-
 }
 
 pub fn render(app: &mut App, f: &mut Frame) {
@@ -240,7 +270,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
     // Render help //TODO: actually make this render help instead of debug text
     let name = app.get_selected_category().0.name().to_string();
     f.render_widget(
-        Paragraph::new(format!("Depth: {}, check: {check}, name: {name}", app.depth))
+        Paragraph::new("ESC or ctrl-C to quit | arrow keys for navigation | space to toggle item | ENTER to download | TAB to toggle everything in the current category | 'S' to change sort mode")
             .bold()
             .alignment(Alignment::Center),
         vertical[1],
@@ -258,21 +288,22 @@ pub fn render(app: &mut App, f: &mut Frame) {
     if app.download {
         let area = centered_rect(60, 60, f.size());
         f.render_widget(Clear, area); // Clear the area so we can render over it
-        let paragraph = Paragraph::new(format!("{total}\n\nPress ESC or ctrl-C to go back\nENTER to download files now"))
-            .bold()
-            .alignment(Alignment::Center)
-            .wrap(Wrap{trim: false})
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Download")
-                    .title_alignment(Alignment::Center)
-                    .title_style(Style::default().bold())
-                    .padding(Padding::new(5, 10, 1, 2))
-            );
+        let paragraph = Paragraph::new(format!(
+            "{total}\n\nPress ESC or ctrl-C to go back\nENTER to download files now"
+        ))
+        .bold()
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: false })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Download")
+                .title_alignment(Alignment::Center)
+                .title_style(Style::default().bold())
+                .padding(Padding::new(5, 10, 1, 2)),
+        );
 
         // Render
         f.render_widget(paragraph, area);
     }
-
 }
