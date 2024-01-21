@@ -113,10 +113,14 @@ fn handle_download_rsync(url: &str, path_str: &str) -> Result<()> {
             "--safe-links",
             "--delete-delay",
             "--delay-updates",
+            "--no-motd",
+            "--progress",
+            "-h",
             &url,
             path_str,
         ])
         .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
         .output()?;
 
     println!("Completed Download: {url}");
