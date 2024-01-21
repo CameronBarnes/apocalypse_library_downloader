@@ -20,6 +20,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             KeyCode::Char(' ') => app.toggle(),
             KeyCode::Enter => app.download = true,
             KeyCode::Tab => app.toggle_all(),
+            KeyCode::Char('s') | KeyCode::Char('S') => app.toggle_sort_style(),
             _ => {},
         }
     } else {

@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 use humansize::WINDOWS;
 use ratatui::{
     style::{Modifier, Style},
@@ -5,7 +7,7 @@ use ratatui::{
 };
 use serde::Deserialize;
 
-use crate::term::ui::StatefulListCounter;
+use crate::term::{ui::StatefulListCounter, app::SortStyle};
 
 #[derive(Debug, Deserialize)]
 pub enum LibraryItem {
@@ -94,6 +96,13 @@ impl LibraryItem {
             style = style.add_modifier(Modifier::CROSSED_OUT);
         }
         item.style(style)
+    }
+
+    pub fn is_document(&self) -> bool {
+        match self {
+            LibraryItem::Document(_) => true,
+            LibraryItem::Category(_) => false,
+        }
     }
 }
 
@@ -253,7 +262,7 @@ impl Category {
         let index = self.counter.clone().selected();
         match &self.items[index] {
             LibraryItem::Document(_) => false,
-            LibraryItem::Category(cat) => !cat.is_selected_category(),
+            LibraryItem::Category(cat) => cat.items.iter().all(|item| item.is_document()),
         }
     }
 
@@ -297,10 +306,24 @@ impl Category {
         }
     }
 
+    pub fn sort(&mut self, style: SortStyle) {
+        match style {
+            SortStyle::Alphabetical => {
+                self.items.sort_unstable_by_key(|item| item.name().to_string());
+            },
+            SortStyle::Size => {
+                self.items.sort_unstable_by_key(|item| Reverse(item.size(true)));
+            },
+        }
+    }
+
     pub fn add(&mut self, item: LibraryItem) {
         match item {
             LibraryItem::Document(_) => self.items.push(item),
             LibraryItem::Category(category) => {
+                if category.items.is_empty() {
+                    return;
+                }
                 if let Some(merge) = self.items.iter_mut().find_map(|e| match e {
                     LibraryItem::Document(_) => None,
                     LibraryItem::Category(cat) => {
@@ -312,7 +335,6 @@ impl Category {
                     }
                 }) {
                     // End of condition, merge the two categories if their names match
-
                     for item in category.items {
                         merge.add(item);
                     }
