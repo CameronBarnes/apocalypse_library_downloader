@@ -95,45 +95,43 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     .split(popup_layout[1])[1]
 }
 
-fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>) -> List {
+fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>, selected: bool) -> List {
+    let block = Block::default().borders(Borders::ALL).title(Title::from(name).alignment(Alignment::Left));
+    let mut highlight_style = Style::new().reversed();
+    if selected {
+        highlight_style = highlight_style.light_cyan();
+    }
+
     match items {
         Some(items) => {
             let items: Vec<ListItem> = items.iter().map(|item| item.as_list_item()).collect();
             List::new(items)
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(Title::from(name).alignment(Alignment::Left)),
-                )
-                .highlight_style(Style::new().reversed())
+                .block(block)
+                .highlight_style(highlight_style)
                 .highlight_symbol(">> ")
         },
         None => {
             let empty: Vec<ListItem> = Vec::new();
             List::new(empty)
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(Title::from(name).alignment(Alignment::Left)),
-                )
-                .highlight_style(Style::new().reversed())
+                .block(block)
+                .highlight_style(highlight_style)
                 .highlight_symbol(">> ")
         }
     } 
 }
 
-fn get_list_from_category_selected(category: &Category) -> (List, StatefulListCounter) {
+fn get_list_from_category_selected(category: &Category, selected: bool) -> (List, StatefulListCounter) {
     if category.items.is_empty() {
-        return (list_from_library_items(category.name().to_string(), None), StatefulListCounter::default())
+        return (list_from_library_items(category.name().to_string(), None, selected), StatefulListCounter::default())
     }
     let index = category.counter.clone().selected();
     let item = &category.items[index];
     match item {
         LibraryItem::Document(_) => {
-            (list_from_library_items(category.name().to_string(), None), StatefulListCounter::default())
+            (list_from_library_items(category.name().to_string(), None, selected), StatefulListCounter::default())
         },
         LibraryItem::Category(cat) => {
-            (list_from_library_items(cat.name().to_string(), Some(&cat.items)), cat.counter.clone())
+            (list_from_library_items(cat.name().to_string(), Some(&cat.items), selected), cat.counter.clone())
         },
     }
 }
@@ -144,8 +142,8 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
     match result {
         (cat, 0) => {
             let state = cat.counter.clone();
-            let first = list_from_library_items(cat.name().to_string(), Some(&cat.items));
-            let (second, second_state) = get_list_from_category_selected(&*cat);
+            let first = list_from_library_items(cat.name().to_string(), Some(&cat.items), true);
+            let (second, second_state) = get_list_from_category_selected(&*cat, false);
             (first, state,
             second, second_state, String::from("0"))
         },
@@ -158,8 +156,8 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
                     LibraryItem::Category(_) => {
                         let state = parent.counter.clone();
                         let name = parent.name().to_string();
-                        let first = list_from_library_items(name, Some(&parent.items));
-                        let (second, second_state) = get_list_from_category_selected(&*parent);
+                        let first = list_from_library_items(name, Some(&parent.items), false);
+                        let (second, second_state) = get_list_from_category_selected(&*parent, true);
                         (first, state,
                         second, second_state, format!("Last: depth: {depth}"))
                     },
@@ -169,15 +167,15 @@ fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, Statef
                     LibraryItem::Document(_) => {
                         let state = parent.counter.clone();
                         let name = parent.name().to_string();
-                        let first = list_from_library_items(name, Some(&parent.items));
-                        let (second, second_state) = get_list_from_category_selected(&*parent);
+                        let first = list_from_library_items(name, Some(&parent.items), true);
+                        let (second, second_state) = get_list_from_category_selected(&*parent, false);
                         (first, state,
                         second, second_state, format!("Doc: depth: {depth}"))
                     },
                     LibraryItem::Category(cat) => {
                         let state = cat.counter.clone();
-                        let (second, second_state) = get_list_from_category_selected(cat);
-                        (list_from_library_items(cat.name().to_string(), Some(&cat.items)), state,
+                        let (second, second_state) = get_list_from_category_selected(cat, true);
+                        (list_from_library_items(cat.name().to_string(), Some(&cat.items), false), state,
                         second, second_state, format!("Cat: depth: {depth}"))
                     },
                 }
