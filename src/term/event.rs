@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use anyhow::{Result, Ok};
+use anyhow::{Ok, Result};
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 
 /// Terminal events.
@@ -26,6 +26,7 @@ pub enum Event {
 
 /// Terminal event handler.
 #[derive(Debug)]
+#[allow(clippy::module_name_repetitions)]
 pub struct EventHandler {
     /// Event sender channel.
     #[allow(dead_code)]
@@ -58,27 +59,19 @@ impl EventHandler {
                                 } else {
                                     std::result::Result::Ok(())
                                 }
-                            },
-                            CrosstermEvent::Mouse(e) => {
-                                sender.send(Event::Mouse(e))
                             }
-                            CrosstermEvent::Resize(w, h) => {
-                                sender.send(Event::Resize(w, h))
-                            },
-                            CrosstermEvent::FocusGained => {
-                                sender.send(Event::FocusGained)
-                            },
-                            CrosstermEvent::FocusLost => {
-                                sender.send(Event::FocusLost)
-                            },
-                            _ => unimplemented!(),
-                        }.expect("failed to send terminal event")
+                            CrosstermEvent::Mouse(e) => sender.send(Event::Mouse(e)),
+                            CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
+                            CrosstermEvent::FocusGained => sender.send(Event::FocusGained),
+                            CrosstermEvent::FocusLost => sender.send(Event::FocusLost),
+                            CrosstermEvent::Paste(_) => unimplemented!(),
+                        }
+                        .expect("failed to send terminal event");
                     }
 
                     if last_tick.elapsed() >= tick_rate {
-                        sender.send(Event::Tick)
-                            .expect("failed to send tick event");
-                        last_tick = Instant::now()
+                        sender.send(Event::Tick).expect("failed to send tick event");
+                        last_tick = Instant::now();
                     }
                 }
             })

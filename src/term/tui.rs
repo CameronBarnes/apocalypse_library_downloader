@@ -6,10 +6,9 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-use super::{event::EventHandler, app::App, ui};
+use super::{app::App, event::EventHandler, ui};
 
-pub type CrosstermTerminal =
-    ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stderr>>;
+pub type CrosstermTerminal = ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stderr>>;
 
 pub struct Tui {
     /// Interface to the Terminal.
@@ -20,17 +19,12 @@ pub struct Tui {
 
 impl Tui {
     pub fn new(terminal: CrosstermTerminal, events: EventHandler) -> Self {
-        Self{terminal, events}
+        Self { terminal, events }
     }
 
     pub fn enter(&mut self) -> Result<()> {
-
         terminal::enable_raw_mode()?;
-        crossterm::execute!(
-            io::stderr(),
-            EnterAlternateScreen,
-            EnableMouseCapture
-            )?;
+        crossterm::execute!(io::stderr(), EnterAlternateScreen, EnableMouseCapture)?;
 
         // Define custom panic hook, so that we can reset the terminal state in case of a panic
         // so that the terminal doesnt end up messed up if we panic and close the application
@@ -44,21 +38,14 @@ impl Tui {
         self.terminal.clear()?;
 
         Ok(())
-
     }
 
     // Resets the terminal interface, also executed in case of a panic
     fn reset() -> Result<()> {
-
         terminal::disable_raw_mode()?;
-        crossterm::execute!(
-            io::stderr(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-            )?;
+        crossterm::execute!(io::stderr(), LeaveAlternateScreen, DisableMouseCapture)?;
 
         Ok(())
-
     }
 
     pub fn exit(&mut self) -> Result<()> {
@@ -68,9 +55,7 @@ impl Tui {
     }
 
     pub fn draw(&mut self, app: &mut App) -> Result<()> {
-
         self.terminal.draw(|frame| ui::render(app, frame))?;
         Ok(())
-
     }
 }

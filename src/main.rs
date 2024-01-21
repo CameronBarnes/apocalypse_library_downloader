@@ -32,8 +32,9 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     // Validate the plugin path
-    let mut root = env::current_exe().unwrap();
-    root.push("./plugins");
+    let root = env::current_exe().unwrap();
+    let root = root.with_file_name("plugins");
+    println!("{}", root.to_str().unwrap());
     let mut path = root.as_path();
     if !args.plugin_path.is_empty() {
         path = Path::new(&args.plugin_path);
@@ -48,7 +49,7 @@ fn main() -> Result<()> {
     }
 
     // Get library index
-    let library = parsing::load_library(path, args.direct_json)?;
+    let library = parsing::load_library(path, args.direct_json);
 
     // Build app object
     let mut app = App::new(library);
@@ -67,10 +68,7 @@ fn main() -> Result<()> {
         match tui.events.next()? {
             term::event::Event::Tick => app.tick(),
             term::event::Event::Key(key_event) => update(&mut app, key_event),
-            term::event::Event::Mouse(_) => {}
-            term::event::Event::Resize(_, _) => {}
-            term::event::Event::FocusGained => {}
-            term::event::Event::FocusLost => {}
+            _ => {}
         }
     }
 
@@ -82,7 +80,7 @@ fn main() -> Result<()> {
     if app.download {
         download::setup_folder(&path)?;
         app.category.items.iter().for_each(|item| {
-            download::download_item(&path, item, args.prefer_http).unwrap(); // Ignore for now
+            download::get_item(&path, item, args.prefer_http).unwrap(); // Ignore for now
         });
     }
 

@@ -22,14 +22,14 @@ pub fn setup_folder(path_str: &str) -> Result<()> {
             return Ok(());
         }
     } else {
-        fs::create_dir(path)?
+        fs::create_dir(path)?;
     }
 
     Ok(())
 }
 
 // Code sourced from https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
-pub async fn download_file(client: &reqwest::Client, url: &str, path: &str) -> Result<(), String> {
+pub async fn get_file(client: &reqwest::Client, url: &str, path: &str) -> Result<(), String> {
     // Reqwest setup
     let res = client
         .get(url)
@@ -46,10 +46,10 @@ pub async fn download_file(client: &reqwest::Client, url: &str, path: &str) -> R
         .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
         .unwrap()
         .progress_chars("#>-"));
-    pb.set_message(format!("Downloading {}", url));
+    pb.set_message(format!("Downloading {url}"));
 
     // download chunks
-    let mut file = File::create(path).or(Err(format!("Failed to create file '{}'", path)))?;
+    let mut file = File::create(path).or(Err(format!("Failed to create file '{path}'")))?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
 
@@ -62,7 +62,7 @@ pub async fn download_file(client: &reqwest::Client, url: &str, path: &str) -> R
         pb.set_position(new);
     }
 
-    pb.finish_with_message(format!("Downloaded {} to {}", url, path));
+    pb.finish_with_message(format!("Downloaded {url} to {path}"));
     Ok(())
 }
 
@@ -73,6 +73,8 @@ pub fn handle_download_file(url: &str, path_str: &str, overwrite: bool) -> Resul
             .build()
             .unwrap()
     });
+
+    static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().unwrap());
 
     let path = Path::new(path_str);
     if path.exists() {
@@ -87,12 +89,7 @@ pub fn handle_download_file(url: &str, path_str: &str, overwrite: bool) -> Resul
         }
     }
 
-    static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().unwrap());
-
-    match RT.block_on(download_file(&CLIENT, url, path_str)).err() {
-        Some(err) => Err(anyhow!("{err}")),
-        None => Ok(()),
-    }
+    RT.block_on(get_file(&CLIENT, url, path_str)).err().map_or_else(|| Ok(()), |err| Err(anyhow!("{err}")))
 }
 
 fn handle_download_rsync(url: &str, path_str: &str) -> Result<()> {
@@ -121,7 +118,7 @@ pub fn check_for_rsync() -> bool {
         .success()
 }
 
-pub fn download_item(path: &str, item: &LibraryItem, prefer_http: bool) -> Result<()> {
+pub fn get_item(path: &str, item: &LibraryItem, prefer_http: bool) -> Result<()> {
     match item {
         LibraryItem::Document(doc) => match doc.download_type() {
             crate::types::DownloadType::Http => {
@@ -144,7 +141,7 @@ pub fn download_item(path: &str, item: &LibraryItem, prefer_http: bool) -> Resul
             setup_folder(&path).unwrap();
             cat.items
                 .iter()
-                .for_each(|item| download_item(&path, item, prefer_http).unwrap());
+                .for_each(|item| get_item(&path, item, prefer_http).unwrap());
         }
     }
 

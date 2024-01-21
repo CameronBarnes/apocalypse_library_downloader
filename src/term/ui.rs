@@ -18,7 +18,7 @@ pub struct StatefulListCounter {
 
 impl StatefulListCounter {
     pub fn new(size: usize) -> Self {
-        StatefulListCounter {
+        Self {
             state: ListState::default(),
             size,
         }
@@ -52,17 +52,16 @@ impl StatefulListCounter {
         self.state.select(Some(i));
     }
 
-    pub fn size(&self) -> usize {
+    pub const fn size(&self) -> usize {
         self.size
     }
 
     pub fn selected(&mut self) -> usize {
-        match self.state.selected() {
-            Some(i) => i,
-            None => {
-                self.state.select(Some(0));
-                0
-            }
+        if let Some(i) = self.state.selected() {
+            i
+        } else {
+            self.state.select(Some(0));
+            0
         }
     }
 
@@ -104,21 +103,18 @@ fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>, selec
         highlight_style = highlight_style.light_cyan();
     }
 
-    match items {
-        Some(items) => {
-            let items: Vec<ListItem> = items.iter().map(|item| item.as_list_item()).collect();
-            List::new(items)
-                .block(block)
-                .highlight_style(highlight_style)
-                .highlight_symbol(">> ")
-        }
-        None => {
-            let empty: Vec<ListItem> = Vec::new();
-            List::new(empty)
-                .block(block)
-                .highlight_style(highlight_style)
-                .highlight_symbol(">> ")
-        }
+    if let Some(items) = items {
+        let items: Vec<ListItem> = items.iter().map(|item| item.as_list_item()).collect();
+        List::new(items)
+            .block(block)
+            .highlight_style(highlight_style)
+            .highlight_symbol(">> ")
+    } else {
+        let empty: Vec<ListItem> = Vec::new();
+        List::new(empty)
+            .block(block)
+            .highlight_style(highlight_style)
+            .highlight_symbol(">> ")
     }
 }
 

@@ -18,18 +18,16 @@ pub struct App {
 impl App {
     pub fn new(mut category: Category) -> Self {
         category.sort(SortStyle::Alphabetical);
-        category.items.iter_mut().for_each(|item| {
-            match item {
-                LibraryItem::Document(_) => {},
-                LibraryItem::Category(cat) => cat.sort(SortStyle::Alphabetical),
-            }
+        category.items.iter_mut().for_each(|item| match item {
+            LibraryItem::Document(_) => {}
+            LibraryItem::Category(cat) => cat.sort(SortStyle::Alphabetical),
         });
-        App {
+        Self {
             should_quit: false,
             category,
             depth: 0,
             download: false,
-            sort_style: SortStyle::Alphabetical
+            sort_style: SortStyle::Alphabetical,
         }
     }
 
@@ -39,7 +37,7 @@ impl App {
         cat.sort(style);
         let index = cat.counter.selected();
         match &mut cat.items[index] {
-            LibraryItem::Document(_) => {},
+            LibraryItem::Document(_) => {}
             LibraryItem::Category(cat) => cat.sort(style),
         }
     }
@@ -154,7 +152,8 @@ impl App {
         }
     }
 
-    pub fn tick(&self) {}
+    #[allow(clippy::unused_self)]
+    pub const fn tick(&self) {}
 
     pub fn quit(&mut self) {
         self.should_quit = true;

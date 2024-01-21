@@ -18,14 +18,14 @@ pub enum LibraryItem {
 impl LibraryItem {
     pub fn size(&self, enabled_only: bool) -> u64 {
         match self {
-            LibraryItem::Document(doc) => {
+            Self::Document(doc) => {
                 if enabled_only {
                     doc.enabled_size()
                 } else {
                     doc.size()
                 }
             }
-            LibraryItem::Category(cat) => {
+            Self::Category(cat) => {
                 if enabled_only {
                     cat.enabled_size()
                 } else {
@@ -37,28 +37,28 @@ impl LibraryItem {
 
     pub fn name(&self) -> &str {
         match self {
-            LibraryItem::Document(doc) => doc.name(),
-            LibraryItem::Category(cat) => cat.name(),
+            Self::Document(doc) => doc.name(),
+            Self::Category(cat) => cat.name(),
         }
     }
 
     pub fn human_readable_size(&self) -> String {
         match self {
-            LibraryItem::Document(doc) => doc.human_readable_size(),
-            LibraryItem::Category(cat) => cat.human_readable_size(),
+            Self::Document(doc) => doc.human_readable_size(),
+            Self::Category(cat) => cat.human_readable_size(),
         }
     }
 
-    pub fn enabled(&self) -> bool {
+    pub const fn enabled(&self) -> bool {
         match self {
-            LibraryItem::Document(doc) => doc.enabled,
-            LibraryItem::Category(cat) => cat.enabled,
+            Self::Document(doc) => doc.enabled,
+            Self::Category(cat) => cat.enabled,
         }
     }
 
     pub fn set_enabled(&mut self, enabled: bool) -> bool {
         match self {
-            LibraryItem::Document(doc) => {
+            Self::Document(doc) => {
                 if doc.can_download() {
                     doc.enabled = enabled;
                 } else {
@@ -66,7 +66,7 @@ impl LibraryItem {
                 }
                 doc.enabled
             }
-            LibraryItem::Category(cat) => {
+            Self::Category(cat) => {
                 if cat.can_download() {
                     cat.enabled = enabled;
                 } else {
@@ -79,15 +79,15 @@ impl LibraryItem {
 
     pub fn set_enabled_recursive(&mut self) {
         match self {
-            LibraryItem::Document(doc) => {
+            Self::Document(doc) => {
                 doc.enabled = doc.can_download();
             }
-            LibraryItem::Category(cat) => {
+            Self::Category(cat) => {
                 cat.enabled = cat.can_download();
                 if !cat.single_selection() {
                     cat.items
                         .iter_mut()
-                        .for_each(|item| item.set_enabled_recursive());
+                        .for_each(Self::set_enabled_recursive);
                 }
             }
         }
@@ -95,15 +95,15 @@ impl LibraryItem {
 
     pub fn can_download(&self) -> bool {
         match self {
-            LibraryItem::Document(doc) => doc.can_download(),
-            LibraryItem::Category(cat) => cat.can_download(),
+            Self::Document(doc) => doc.can_download(),
+            Self::Category(cat) => cat.can_download(),
         }
     }
 
     pub fn as_list_item(&self) -> ListItem {
         let name = self.name();
         let size = self.human_readable_size();
-        let item = ListItem::new(format!("{name}:  {size}").to_string());
+        let item = ListItem::new(format!("{name}:  {size}"));
         let mut style = Style::default();
         if !self.enabled() {
             style = style.add_modifier(Modifier::DIM);
@@ -114,10 +114,10 @@ impl LibraryItem {
         item.style(style)
     }
 
-    pub fn is_document(&self) -> bool {
+    pub const fn is_document(&self) -> bool {
         match self {
-            LibraryItem::Document(_) => true,
-            LibraryItem::Category(_) => false,
+            Self::Document(_) => true,
+            Self::Category(_) => false,
         }
     }
 }
@@ -142,7 +142,7 @@ impl Document {
     #[allow(unused)]
     pub fn new(name: String, url: String, size: u64, d_type: DownloadType) -> Self {
         let enabled = d_type != DownloadType::Rsync || !crate::IS_WINDOWS;
-        Document {
+        Self {
             name,
             url,
             size,
@@ -159,15 +159,15 @@ impl Document {
         &self.url
     }
 
-    pub fn size(&self) -> u64 {
+    pub const fn size(&self) -> u64 {
         self.size
     }
 
-    pub fn download_type(&self) -> &DownloadType {
+    pub const fn download_type(&self) -> &DownloadType {
         &self.download_type
     }
 
-    pub fn enabled_size(&self) -> u64 {
+    pub const fn enabled_size(&self) -> u64 {
         if self.enabled {
             self.size
         } else {
@@ -205,7 +205,7 @@ impl Category {
         }
         let enabled = items.iter().any(LibraryItem::can_download);
         let len = items.len();
-        Category {
+        Self {
             name,
             items,
             enabled,
@@ -242,10 +242,10 @@ impl Category {
     }
 
     pub fn can_download(&self) -> bool {
-        self.items.iter().any(|item| item.can_download())
+        self.items.iter().any(LibraryItem::can_download)
     }
 
-    pub fn single_selection(&self) -> bool {
+    pub const fn single_selection(&self) -> bool {
         self.single_selection
     }
 
@@ -253,7 +253,7 @@ impl Category {
         humansize::format_size(self.size(true), WINDOWS)
     }
 
-    pub fn get_selected_category(&mut self, depth: usize) -> (&mut Category, usize) {
+    pub fn get_selected_category(&mut self, depth: usize) -> (&mut Self, usize) {
         if depth == 0 || self.is_selected_last() {
             (self, depth)
         } else if self.is_selected_category() {
@@ -278,7 +278,7 @@ impl Category {
         let index = self.counter.clone().selected();
         match &self.items[index] {
             LibraryItem::Document(_) => false,
-            LibraryItem::Category(cat) => cat.items.iter().all(|item| item.is_document()),
+            LibraryItem::Category(cat) => cat.items.iter().all(LibraryItem::is_document),
         }
     }
 

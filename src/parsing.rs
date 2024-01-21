@@ -1,11 +1,10 @@
 use std::{fs, path::Path, process::Command};
 
-use anyhow::Result;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::types::{Category, LibraryItem};
 
-pub fn load_library(path: &Path, direct_json: bool) -> Result<Category> {
+pub fn load_library(path: &Path, direct_json: bool) -> Category {
     let mut root = Category::new("Apocalypse Library".into(), vec![], false);
 
     if direct_json {
@@ -90,5 +89,5 @@ pub fn load_library(path: &Path, direct_json: bool) -> Result<Category> {
         item.set_enabled_recursive();
     }); // Getting some odd behavior, this should fix it
 
-    Ok(root)
+    root
 }
