@@ -56,7 +56,7 @@ fn main() -> Result<()> {
     // Init term ui
     let backend = CrosstermBackend::new(std::io::stderr());
     let terminal = Terminal::new(backend)?;
-    let events = EventHandler::new(250);
+    let events = EventHandler::new(16);
     let mut tui = Tui::new(terminal, events);
     tui.enter()?;
 
