@@ -146,18 +146,16 @@ fn get_list_from_category_selected(
     }
 }
 
-fn get_lists_from_app(
-    app: &mut App,
-) -> (List, StatefulListCounter, List, StatefulListCounter, String) {
+fn get_lists_from_app(app: &mut App) -> (List, StatefulListCounter, List, StatefulListCounter) {
     let result = app.get_selected_category();
     match result {
         (cat, 0) => {
             let state = cat.counter.clone();
             let first = list_from_library_items(cat.name().to_string(), Some(&cat.items), true);
             let (second, second_state) = get_list_from_category_selected(&*cat, false);
-            (first, state, second, second_state, String::from("0"))
+            (first, state, second, second_state)
         }
-        (parent, depth) => {
+        (parent, _) => {
             let index = parent.counter.selected();
             let item = &parent.items[index];
             if parent.is_selected_last() {
@@ -169,13 +167,7 @@ fn get_lists_from_app(
                         let first = list_from_library_items(name, Some(&parent.items), false);
                         let (second, second_state) =
                             get_list_from_category_selected(&*parent, true);
-                        (
-                            first,
-                            state,
-                            second,
-                            second_state,
-                            format!("Last: depth: {depth}"),
-                        )
+                        (first, state, second, second_state)
                     }
                 }
             } else {
@@ -186,13 +178,7 @@ fn get_lists_from_app(
                         let first = list_from_library_items(name, Some(&parent.items), true);
                         let (second, second_state) =
                             get_list_from_category_selected(&*parent, false);
-                        (
-                            first,
-                            state,
-                            second,
-                            second_state,
-                            format!("Doc: depth: {depth}"),
-                        )
+                        (first, state, second, second_state)
                     }
                     LibraryItem::Category(cat) => {
                         let state = cat.counter.clone();
@@ -206,7 +192,6 @@ fn get_lists_from_app(
                             state,
                             second,
                             second_state,
-                            format!("Cat: depth: {depth}"),
                         )
                     }
                 }
@@ -233,7 +218,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
     .split(vertical[2]);
 
     // Get all the stuff we actually want to render, and the information to do so
-    let (first, mut first_state, second, mut second_state, check) = get_lists_from_app(app);
+    let (first, mut first_state, second, mut second_state) = get_lists_from_app(app);
 
     // Render the first list
     f.render_stateful_widget(first, horizontal[0], &mut first_state.state);
@@ -267,8 +252,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
         vertical[0],
     );
 
-    // Render help //TODO: actually make this render help instead of debug text
-    let name = app.get_selected_category().0.name().to_string();
+    // Render help
     f.render_widget(
         Paragraph::new("ESC or ctrl-C to quit | arrow keys for navigation | space to toggle item | ENTER to download | TAB to toggle everything in the current category | 'S' to change sort mode")
             .bold()
