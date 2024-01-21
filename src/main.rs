@@ -80,7 +80,7 @@ fn main() -> Result<()> {
     if app.download {
         download::setup_folder(&path)?;
         app.category.items.iter().for_each(|item| {
-            download::get_item(&path, item, args.prefer_http).unwrap(); // Ignore for now
+            download::get_item(&path, item, args.prefer_http);
         });
     }
 

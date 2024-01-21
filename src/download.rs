@@ -2,7 +2,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::Path,
-    process::Command,
+    process::{Command, Stdio},
 };
 
 use anyhow::{anyhow, Result};
@@ -89,11 +89,23 @@ pub fn handle_download_file(url: &str, path_str: &str, overwrite: bool) -> Resul
         }
     }
 
-    RT.block_on(get_file(&CLIENT, url, path_str)).err().map_or_else(|| Ok(()), |err| Err(anyhow!("{err}")))
+    RT.block_on(get_file(&CLIENT, url, path_str))
+        .err()
+        .map_or_else(|| Ok(()), |err| Err(anyhow!("{err}")))
 }
 
 fn handle_download_rsync(url: &str, path_str: &str) -> Result<()> {
-    // TODO: handle making sure the rsync url is valid
+    println!("Starting Download: {url}");
+
+    let mut url = url.to_string();
+
+    if url.starts_with("http://") {
+        url = url.strip_prefix("http://").unwrap().to_string();
+    }
+
+    if !url.starts_with("rsync://") {
+        url = format!("rsync://{url}");
+    }
 
     Command::new("rsync")
         .args([
@@ -101,10 +113,13 @@ fn handle_download_rsync(url: &str, path_str: &str) -> Result<()> {
             "--safe-links",
             "--delete-delay",
             "--delay-updates",
-            url,
+            &url,
             path_str,
         ])
+        .stdin(Stdio::inherit())
         .output()?;
+
+    println!("Completed Download: {url}");
 
     Ok(())
 }
@@ -118,20 +133,25 @@ pub fn check_for_rsync() -> bool {
         .success()
 }
 
-pub fn get_item(path: &str, item: &LibraryItem, prefer_http: bool) -> Result<()> {
+pub fn get_item(path: &str, item: &LibraryItem, prefer_http: bool) {
+    if !item.enabled() {
+        return;
+    }
     match item {
         LibraryItem::Document(doc) => match doc.download_type() {
             crate::types::DownloadType::Http => {
                 let path = format!("{path}/{}", doc.url().split('/').last().unwrap());
                 handle_download_file(doc.url(), &path, false)
             }
-            crate::types::DownloadType::Rsync => handle_download_rsync(doc.url(), path),
+            crate::types::DownloadType::Rsync => {
+                handle_download_rsync(doc.url(), &format!("{path}/{}", doc.name()))
+            }
             crate::types::DownloadType::Either => {
                 if crate::IS_WINDOWS || !*crate::HAS_RSYNC || prefer_http {
                     let path = format!("{path}/{}", doc.url().split('/').last().unwrap());
                     handle_download_file(doc.url(), &path, false)
                 } else {
-                    handle_download_rsync(doc.url(), path)
+                    handle_download_rsync(doc.url(), &format!("{path}/{}", doc.name()))
                 }
             }
         }
@@ -141,9 +161,7 @@ pub fn get_item(path: &str, item: &LibraryItem, prefer_http: bool) -> Result<()>
             setup_folder(&path).unwrap();
             cat.items
                 .iter()
-                .for_each(|item| get_item(&path, item, prefer_http).unwrap());
+                .for_each(|item| get_item(&path, item, prefer_http));
         }
     }
-
-    Ok(())
 }
