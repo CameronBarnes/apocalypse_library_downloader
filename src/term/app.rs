@@ -79,6 +79,7 @@ impl App {
                 LibraryItem::Category(cat) => cat.counter.next(),
             }
         }
+        self.sort();
     }
 
     pub fn previous(&mut self) {
@@ -92,6 +93,7 @@ impl App {
                 LibraryItem::Category(cat) => cat.counter.previous(),
             }
         }
+        self.sort();
     }
 
     pub fn home(&mut self) {
