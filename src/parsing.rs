@@ -87,7 +87,7 @@ pub fn load_library(path: &Path, direct_json: bool) -> Result<Category> {
     root.fix_counter(); // Will recursively fix the list counter objects of all contained
                         // categories
     root.items.iter_mut().for_each(|item| {
-        item.set_enabled(true);
+        item.set_enabled_recursive();
     }); // Getting some odd behavior, this should fix it
 
     Ok(root)

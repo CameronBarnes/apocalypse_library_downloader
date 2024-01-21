@@ -18,6 +18,12 @@ pub struct App {
 impl App {
     pub fn new(mut category: Category) -> Self {
         category.sort(SortStyle::Alphabetical);
+        category.items.iter_mut().for_each(|item| {
+            match item {
+                LibraryItem::Document(_) => {},
+                LibraryItem::Category(cat) => cat.sort(SortStyle::Alphabetical),
+            }
+        });
         App {
             should_quit: false,
             category,

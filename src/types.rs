@@ -77,6 +77,20 @@ impl LibraryItem {
         }
     }
 
+    pub fn set_enabled_recursive(&mut self) {
+        match self {
+            LibraryItem::Document(doc) => {
+                doc.enabled = doc.can_download();
+            }
+            LibraryItem::Category(cat) => {
+                cat.enabled = cat.can_download();
+                if !cat.single_selection() {
+                    cat.items.iter_mut().for_each(|item| item.set_enabled_recursive());
+                }
+            }
+        }
+    }
+
     pub fn can_download(&self) -> bool {
         match self {
             LibraryItem::Document(doc) => doc.can_download(),
@@ -275,8 +289,7 @@ impl Category {
         }
     }
 
-    pub fn toggle_selected_item(&mut self) {
-        let single_selection = self.single_selection();
+    pub fn toggle_selected_item(&mut self) {        let single_selection = self.single_selection();
         let index = self.counter.selected();
         let item = &self.items[index];
         let (enabled, can_download) = (item.enabled(), item.can_download());
@@ -312,7 +325,13 @@ impl Category {
                 self.items.sort_unstable_by_key(|item| item.name().to_string());
             },
             SortStyle::Size => {
-                self.items.sort_unstable_by_key(|item| Reverse(item.size(true)));
+                self.items.sort_unstable_by_key(|item| {
+                    let size = match item {
+                        LibraryItem::Document(doc) => doc.size(),
+                        LibraryItem::Category(cat) => cat.size(true),
+                    };
+                    Reverse(size)
+                });
             },
         }
     }
