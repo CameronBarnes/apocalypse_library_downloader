@@ -1,0 +1,54 @@
+
+Kiwix: Done
+Survivor Library: Done
+
+Linux:
+
+		Arch Wiki: Done
+		Arch Mirror: Done
+		AUR: Not Started
+		
+		Debian Mirror: Not Started
+		Debian Wiki: Not Started
+		
+		Manjaro Mirror: Not Started
+		Manjaro Wiki: Not Started
+		
+		Gentoo Mirror: Not Started
+		Gentoo Wiki: Done
+		
+		Alpine Mirror: Not Started
+		Alpine Wiki: Done
+
+		Kali Mirror: Not Started
+		Kali Wiki: Not Started
+
+Height Map Data: Not Started
+http://viewfinderpanoramas.org/Coverage%20map%20viewfinderpanoramas_org3.htm
+
+Open Street Map Data: Not Started
+https://download.geofabrik.de
+Osmium Tool for processing Open Street Map Data
+https://osmcode.org/osmium-tool/
+
+Other software to include:
+Navit
+GvSIG
+Viking
+
+Android:
+		F-Droid: Not Started
+		OS Images: Not Started
+
+Programming:
+
+		Rust:
+				Rustup Mirror: Not Started
+				Rust Books: Not Started
+		
+		Java:
+				Java Docs: Not Started
+				JDK: Not Started
+		
+		C++:
+				learncpp.net: Not Started
