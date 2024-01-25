@@ -112,7 +112,7 @@ fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>, selec
     } else {
         let empty: Vec<ListItem> = Vec::new();
         List::new(empty)
-            .block(block)
+            .block(block.dim())
             .highlight_style(highlight_style)
             .highlight_symbol(">> ")
     }
