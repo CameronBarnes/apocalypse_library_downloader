@@ -1,9 +1,12 @@
 
+Features To Add:
+Git support: Not Started
+Multiple files per document: Not Started
+
 Kiwix: Done
 Survivor Library: Done
 
 Linux:
-
 		Arch Wiki: Done
 		Arch Mirror: Done
 		AUR: Not Started
@@ -26,8 +29,8 @@ Linux:
 Height Map Data: Not Started
 http://viewfinderpanoramas.org/Coverage%20map%20viewfinderpanoramas_org3.htm
 
-Open Street Map Data: Not Started
-https://download.geofabrik.de
+Open Street Map Data: Done
+Open Street Map Software: Not Started
 Osmium Tool for processing Open Street Map Data
 https://osmcode.org/osmium-tool/
 
@@ -35,6 +38,9 @@ Other software to include:
 Navit
 GvSIG
 Viking
+
+Canadian Government:
+CKAN: Not Started
 
 Android:
 		F-Droid: Not Started
