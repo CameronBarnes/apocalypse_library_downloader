@@ -10,12 +10,19 @@ use serde::Deserialize;
 use crate::term::{app::SortStyle, ui::StatefulListCounter};
 
 #[derive(Debug, Deserialize)]
+/// Stores either a Category or Document so that Categories may store either
 pub enum LibraryItem {
     Document(Document),
     Category(Category),
 }
 
 impl LibraryItem {
+    /// Returns the size of the `LibraryItem` in bytes
+    ///
+    ///  # Arguments
+    ///
+    ///  * `enabled_only`- should it only include the size of enabled items
+    ///
     pub fn size(&self, enabled_only: bool) -> u64 {
         match self {
             Self::Document(doc) => {
@@ -35,6 +42,7 @@ impl LibraryItem {
         }
     }
 
+    /// Returns the name of the contained item
     pub fn name(&self) -> &str {
         match self {
             Self::Document(doc) => doc.name(),
@@ -42,6 +50,7 @@ impl LibraryItem {
         }
     }
 
+    /// Returns the size of the item formatted to be human readable
     pub fn human_readable_size(&self) -> String {
         match self {
             Self::Document(doc) => doc.human_readable_size(),
@@ -49,6 +58,7 @@ impl LibraryItem {
         }
     }
 
+    /// Returns if the item is enabled
     pub const fn enabled(&self) -> bool {
         match self {
             Self::Document(doc) => doc.enabled,
@@ -56,6 +66,14 @@ impl LibraryItem {
         }
     }
 
+    /// Set the state of the contained item as enabled or not
+    /// Returns the state of the item at the end of the function
+    /// If the item cant be downloaded, then it wont be set as enabled
+    ///
+    /// # Arguments
+    ///
+    ///  * `enabled` - Should the item be enabled, if it can be downloaded
+    ///
     pub fn set_enabled(&mut self, enabled: bool) -> bool {
         match self {
             Self::Document(doc) => {
@@ -77,6 +95,8 @@ impl LibraryItem {
         }
     }
 
+    /// Recursively enable all contained items, if they can be downloaded
+    /// Ignores single selection category contents
     pub fn set_enabled_recursive(&mut self) {
         match self {
             Self::Document(doc) => {
@@ -85,14 +105,13 @@ impl LibraryItem {
             Self::Category(cat) => {
                 cat.enabled = cat.can_download();
                 if !cat.single_selection() {
-                    cat.items
-                        .iter_mut()
-                        .for_each(Self::set_enabled_recursive);
+                    cat.items.iter_mut().for_each(Self::set_enabled_recursive);
                 }
             }
         }
     }
 
+    /// Returns if the item can be downloaded
     pub fn can_download(&self) -> bool {
         match self {
             Self::Document(doc) => doc.can_download(),
@@ -100,6 +119,7 @@ impl LibraryItem {
         }
     }
 
+    /// Converts the item to a ratatui `ListItem`
     pub fn as_list_item(&self) -> ListItem {
         let name = self.name();
         let size = self.human_readable_size();
@@ -114,6 +134,7 @@ impl LibraryItem {
         item.style(style)
     }
 
+    /// Returns if the contained item is a Document
     pub const fn is_document(&self) -> bool {
         match self {
             Self::Document(_) => true,
@@ -122,26 +143,37 @@ impl LibraryItem {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Clone, Copy)]
+/// The download method to use for a `Document`
 pub enum DownloadType {
+    /// Download files with HTTP(s) GET requests
     Http,
+    /// Download files by running the rsync application
     Rsync,
+    /// Supports either HTTP GET or Rsync. Prefers Rsync by default
     Either,
 }
 
 #[derive(Debug, Deserialize)]
+/// Represents a File or Group of files to download
 pub struct Document {
+    /// The name of the Document(s)
     name: String,
+    /// The path of the File(s) to get
     url: String,
+    /// The total size of the File(s) in bytes
     size: u64,
+    /// The method to use to download the File(s)
     download_type: DownloadType,
+    /// Should these File(s) be downloaded
     pub enabled: bool,
 }
 
 impl Document {
     #[allow(unused)]
+    // Probably doesnt need to be here, as we dont actually use this in this executable
     pub fn new(name: String, url: String, size: u64, d_type: DownloadType) -> Self {
-        let enabled = d_type != DownloadType::Rsync || !crate::IS_WINDOWS;
+        let enabled = d_type != DownloadType::Rsync || (!crate::IS_WINDOWS && *crate::HAS_RSYNC);
         Self {
             name,
             url,
@@ -151,22 +183,27 @@ impl Document {
         }
     }
 
+    /// Returns a reference to the name of this Document
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Returns a reference to the url where the File(s) can be found
     pub fn url(&self) -> &str {
         &self.url
     }
 
+    /// Returns the size in bytes
     pub const fn size(&self) -> u64 {
         self.size
     }
 
-    pub const fn download_type(&self) -> &DownloadType {
-        &self.download_type
+    /// Returns the download type of this Document
+    pub const fn download_type(&self) -> DownloadType {
+        self.download_type
     }
 
+    /// Returns the size of this document, or zero if it's not enabled
     pub const fn enabled_size(&self) -> u64 {
         if self.enabled {
             self.size
@@ -175,27 +212,37 @@ impl Document {
         }
     }
 
+    /// Returns if we can download this Document
     /// In cases such as a rsync Document on a windows system we cant download it
     pub fn can_download(&self) -> bool {
         self.download_type != DownloadType::Rsync || (!crate::IS_WINDOWS && *crate::HAS_RSYNC)
     }
 
+    /// Returns the size of the item formatted to be human readable
     pub fn human_readable_size(&self) -> String {
         humansize::format_size(self.size, WINDOWS)
     }
 }
 
 #[derive(Debug, Deserialize)]
+/// Contains a navigable list of items grouped together. Items may be either Documents or
+/// Categories of their own
 pub struct Category {
+    /// The name of the category
     name: String,
+    /// The items contained in the category, may be a mix of Documents and Categories
     pub items: Vec<LibraryItem>,
+    /// Can only one item be selected at a time
     single_selection: bool,
+    /// Is this category enabled for download
     pub enabled: bool,
     #[serde(skip)]
+    /// The list cursor pointer
     pub counter: StatefulListCounter,
 }
 
 impl Category {
+    /// Creates a new Category with the provided items and settings
     pub fn new(name: String, mut items: Vec<LibraryItem>, single_selection: bool) -> Self {
         if single_selection {
             // Only one option can be enabled at a time with single selection
@@ -214,6 +261,7 @@ impl Category {
         }
     }
 
+    /// Fixes the `StatefulListCounter` which is broken when this object is deserialized
     pub fn fix_counter(&mut self) {
         self.counter = StatefulListCounter::new(self.items.len());
         self.counter.selected();
@@ -225,14 +273,22 @@ impl Category {
         }
     }
 
+    /// Returns a reference to the Category's name
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Returns the size of the `Category` and contained items in bytes
+    ///
+    ///  # Arguments
+    ///
+    ///  * `enabled_only`- should it only include the size of enabled items
+    ///
     pub fn size(&self, enabled_only: bool) -> u64 {
         self.items.iter().map(|item| item.size(enabled_only)).sum()
     }
 
+    /// Returns the size of all enabled items, or zero if this `Category` is disabled
     pub fn enabled_size(&self) -> u64 {
         if self.enabled {
             self.size(true)
@@ -241,18 +297,22 @@ impl Category {
         }
     }
 
+    /// Returns if any `LibraryItem` contained in this `Category` can be downloaded
     pub fn can_download(&self) -> bool {
         self.items.iter().any(LibraryItem::can_download)
     }
 
+    /// Returns if only a single item in this `Category` may be enabled at a time
     pub const fn single_selection(&self) -> bool {
         self.single_selection
     }
 
+    /// Returns the enabled size of the `Category` formatted to be human readable
     pub fn human_readable_size(&self) -> String {
         humansize::format_size(self.size(true), WINDOWS)
     }
 
+    /// Proceeds down the specified depth to find the last selected `Category`
     pub fn get_selected_category(&mut self, depth: usize) -> (&mut Self, usize) {
         if depth == 0 || self.is_selected_last() {
             (self, depth)
@@ -266,6 +326,7 @@ impl Category {
         }
     }
 
+    /// Returns if the item currently selected in this `Category` is a `Category`
     pub fn is_selected_category(&self) -> bool {
         let index = self.counter.clone().selected();
         match &self.items[index] {
@@ -274,6 +335,8 @@ impl Category {
         }
     }
 
+    /// Returns if the currently selected item is a `Category` and that `Category` only contains
+    /// `Documents`
     pub fn is_selected_last(&self) -> bool {
         let index = self.counter.clone().selected();
         match &self.items[index] {
@@ -282,6 +345,7 @@ impl Category {
         }
     }
 
+    /// If this `Category` is not `single_selection` toggle the state of all items in this `Category`
     pub fn toggle_all_items(&mut self) {
         if !self.single_selection() {
             self.items.iter_mut().for_each(|item| {
@@ -291,6 +355,7 @@ impl Category {
         }
     }
 
+    /// Toggles the currently selected item in the `Category`
     pub fn toggle_selected_item(&mut self) {
         let single_selection = self.single_selection();
         let index = self.counter.selected();
@@ -322,6 +387,13 @@ impl Category {
         }
     }
 
+    /// Sorts the `Category` contents by the provided style
+    ///
+    ///  # Arguments
+    ///
+    ///  * `style` - the sort order to use
+    ///  Currently either Alphabetically A-Z or by size decending
+    ///
     pub fn sort(&mut self, style: SortStyle) {
         match style {
             SortStyle::Alphabetical => {
@@ -340,7 +412,13 @@ impl Category {
         }
     }
 
-    pub fn add(&mut self, item: LibraryItem) {
+    /// Adds the provided `LibraryItem` to this `Category`
+    /// If the provided item is a `Category` it will check to see if it has the same name as an
+    /// existing `Category` and merge them together
+    pub fn add(&mut self, mut item: LibraryItem) {
+        if self.single_selection && !self.items.is_empty() {
+            item.set_enabled(false);
+        }
         match item {
             LibraryItem::Document(_) => self.items.push(item),
             LibraryItem::Category(category) => {

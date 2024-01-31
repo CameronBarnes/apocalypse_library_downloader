@@ -61,7 +61,7 @@ fn main() -> Result<()> {
     let mut tui = Tui::new(terminal, events);
     tui.enter()?;
 
-    // Do man program loop
+    // Do main program loop
     while !app.should_quit {
         tui.draw(&mut app)?;
 

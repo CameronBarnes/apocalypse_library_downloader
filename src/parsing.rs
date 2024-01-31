@@ -4,6 +4,9 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::types::{Category, LibraryItem};
 
+/// Loads a library of items from either executables or json files in the directory at the provided
+/// `path`. `direct_json` will make it ignore executables and load from json files instead if true
+// FIXME: Fix the unpleasant amount of unwraps in the code here
 pub fn load_library(path: &Path, direct_json: bool) -> Category {
     let mut root = Category::new("Apocalypse Library".into(), vec![], false);
 
@@ -12,7 +15,7 @@ pub fn load_library(path: &Path, direct_json: bool) -> Category {
             .read_dir()
             .unwrap()
             .par_bridge()
-            .map(|file| file.unwrap())
+            .map(std::result::Result::unwrap)
             .filter(|file| !file.path().is_dir())
             .map(|file| {
                 let file_path = file.path();
@@ -58,14 +61,12 @@ pub fn load_library(path: &Path, direct_json: bool) -> Category {
                     return vec![];
                 }
                 let output = Command::new(file.path()).output().unwrap();
-                if !output.status.success() {
-                    panic!(
+                assert!(output.status.success(), 
                         "Command: {:?} failed with output: {}{}",
                         file.file_name(),
                         String::from_utf8(output.stdout).unwrap(),
                         String::from_utf8(output.stderr).unwrap()
                     );
-                }
                 let str = String::from_utf8(output.stdout).unwrap();
                 if str.contains('\n') {
                     for line in str.lines() {
