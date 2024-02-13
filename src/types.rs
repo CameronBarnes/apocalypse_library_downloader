@@ -401,13 +401,20 @@ impl Category {
                     .sort_unstable_by_key(|item| item.name().to_string());
             }
             SortStyle::Size => {
+                let name = self.items[self.counter.selected()].name().to_owned();
                 self.items.sort_unstable_by_key(|item| {
                     let size = match item {
                         LibraryItem::Document(doc) => doc.size(),
-                        LibraryItem::Category(cat) => cat.size(false),
+                        LibraryItem::Category(cat) => cat.size(true),
                     };
                     Reverse(size)
                 });
+                if self.counter.selected() != 0 {
+                    let found = self.items.iter().enumerate().find(|enumerated| enumerated.1.name().eq_ignore_ascii_case(&name));
+                    if let Some((i, _)) = found {
+                        self.counter.set_selected(i);
+                    }
+                }
             }
         }
     }
