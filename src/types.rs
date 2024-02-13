@@ -404,7 +404,7 @@ impl Category {
                 self.items.sort_unstable_by_key(|item| {
                     let size = match item {
                         LibraryItem::Document(doc) => doc.size(),
-                        LibraryItem::Category(cat) => cat.size(true),
+                        LibraryItem::Category(cat) => cat.size(false),
                     };
                     Reverse(size)
                 });
