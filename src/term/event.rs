@@ -46,7 +46,8 @@ impl EventHandler {
             let sender = sender.clone();
             thread::spawn(move || {
                 let mut last_tick = Instant::now();
-                loop {
+                let mut live = true;
+                while live {
                     let timeout = tick_rate
                         .checked_sub(last_tick.elapsed())
                         .unwrap_or(tick_rate);
@@ -70,7 +71,9 @@ impl EventHandler {
                     }
 
                     if last_tick.elapsed() >= tick_rate {
-                        sender.send(Event::Tick).expect("failed to send tick event");
+                        if sender.send(Event::Tick).is_err() {
+                            live = false;
+                        }
                         last_tick = Instant::now();
                     }
                 }
