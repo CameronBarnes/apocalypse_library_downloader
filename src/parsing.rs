@@ -2,7 +2,7 @@ use std::{fs, path::Path, process::Command};
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::types::{Category, LibraryItem};
+use crate::types::Category;
 
 /// Loads a library of items from either executables or json files in the directory at the provided
 /// `path`. `direct_json` will make it ignore executables and load from json files instead if true
@@ -10,9 +10,8 @@ use crate::types::{Category, LibraryItem};
 pub fn load_library(path: &Path, direct_json: bool) -> Category {
     let mut root = Category::new("Apocalypse Library".into(), vec![], false);
 
-    if direct_json {
-        let results: Vec<Vec<LibraryItem>> = path
-            .read_dir()
+    let results: Vec<Vec<String>> = if direct_json {
+        path.read_dir()
             .unwrap()
             .par_bridge()
             .map(std::result::Result::unwrap)
@@ -24,30 +23,25 @@ pub fn load_library(path: &Path, direct_json: bool) -> Category {
                     println!("Loading fron file: {:?}", file.path());
                     let str = fs::read_to_string(file.path()).unwrap();
                     if str.contains('\n') {
-                        let mut coll: Vec<LibraryItem> = Vec::new();
+                        let mut coll: Vec<String> = Vec::new();
                         for line in str.lines() {
-                            coll.push(serde_json::from_str(line).unwrap());
+                            coll.push(line.to_string());
                         }
                         coll
                     } else {
-                        vec![serde_json::from_str(&str).unwrap()]
+                        vec![str]
                     }
                 } else {
                     vec![]
                 }
             })
-            .collect();
-        results
-            .into_iter()
-            .flatten()
-            .for_each(|item| root.add(item));
+            .collect()
     } else {
-        let results: Vec<Vec<LibraryItem>> = path
-            .read_dir()
+        path.read_dir()
             .unwrap()
             .par_bridge()
             .map(|file| {
-                let mut coll: Vec<LibraryItem> = Vec::new();
+                let mut coll: Vec<String> = Vec::new();
                 let file = file.unwrap();
                 let file_path = file.path();
                 if file_path.is_dir() {
@@ -61,28 +55,33 @@ pub fn load_library(path: &Path, direct_json: bool) -> Category {
                     return vec![];
                 }
                 let output = Command::new(file.path()).output().unwrap();
-                assert!(output.status.success(), 
-                        "Command: {:?} failed with output: {}{}",
-                        file.file_name(),
-                        String::from_utf8(output.stdout).unwrap(),
-                        String::from_utf8(output.stderr).unwrap()
-                    );
+                assert!(
+                    output.status.success(),
+                    "Command: {:?} failed with output: {}{}",
+                    file.file_name(),
+                    String::from_utf8(output.stdout).unwrap(),
+                    String::from_utf8(output.stderr).unwrap()
+                );
                 let str = String::from_utf8(output.stdout).unwrap();
                 if str.contains('\n') {
                     for line in str.lines() {
-                        coll.push(serde_json::from_str(line).unwrap());
+                        coll.push(line.to_string());
                     }
                 } else {
-                    coll.push(serde_json::from_str(&str).unwrap());
+                    coll.push(str);
                 }
                 coll
             })
-            .collect();
-        results
-            .into_iter()
-            .flatten()
-            .for_each(|item| root.add(item));
-    }
+            .collect()
+    };
+
+    results
+        .into_iter()
+        .flatten()
+        .flat_map(|str| serde_json::from_str(&str))
+        .for_each(|item| {
+            root.add(item);
+        });
 
     root.fix_counter(); // Will recursively fix the list counter objects of all contained
                         // categories
