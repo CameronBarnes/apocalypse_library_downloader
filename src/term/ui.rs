@@ -1,3 +1,5 @@
+use std::{sync::RwLock, rc::Rc};
+
 use ratatui::{
     prelude::*,
     widgets::{
@@ -12,20 +14,21 @@ use super::app::App;
 
 #[derive(Debug, Default, Clone)]
 pub struct StatefulListCounter {
-    state: ListState,
+    state: Rc<RwLock<ListState>>,
     size: usize,
 }
 
 impl StatefulListCounter {
     pub fn new(size: usize) -> Self {
         Self {
-            state: ListState::default(),
+            state: Rc::new(RwLock::new(ListState::default())),
             size,
         }
     }
 
     pub fn next(&mut self) {
-        let i = match self.state.selected() {
+        let selected = self.state.try_write().unwrap().selected();
+        let i = match selected {
             Some(i) => {
                 if i >= self.size - 1 {
                     0
@@ -35,11 +38,12 @@ impl StatefulListCounter {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state.try_write().unwrap().select(Some(i));
     }
 
     pub fn previous(&mut self) {
-        let i = match self.state.selected() {
+        let selected = self.state.try_write().unwrap().selected();
+        let i = match selected {
             Some(i) => {
                 if i == 0 {
                     self.size - 1
@@ -49,7 +53,7 @@ impl StatefulListCounter {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state.try_write().unwrap().select(Some(i));
     }
 
     pub const fn size(&self) -> usize {
@@ -57,17 +61,18 @@ impl StatefulListCounter {
     }
 
     pub fn selected(&mut self) -> usize {
-        if let Some(i) = self.state.selected() {
+        let selected = self.state.try_write().unwrap().selected();
+        if let Some(i) = selected {
             i
         } else {
-            self.state.select(Some(0));
+            self.state.try_write().unwrap().select(Some(0));
             0
         }
     }
 
     pub fn set_selected(&mut self, index: usize) {
         let index = usize::min(self.size - 1, index);
-        self.state.select(Some(index));
+        self.state.try_write().unwrap().select(Some(index));
     }
 }
 
@@ -217,7 +222,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
     let (first, mut first_state, second, mut second_state) = get_lists_from_app(app);
 
     // Render the first list
-    f.render_stateful_widget(first, horizontal[0], &mut first_state.state);
+    f.render_stateful_widget(first, horizontal[0], &mut first_state.state.try_write().unwrap());
     // Generate scrollbar
     let mut scrollbar_state =
         ScrollbarState::new(first_state.size).position(first_state.selected());
@@ -229,7 +234,7 @@ pub fn render(app: &mut App, f: &mut Frame) {
     );
 
     // Render the second list
-    f.render_stateful_widget(second, horizontal[1], &mut second_state.state);
+    f.render_stateful_widget(second, horizontal[1], &mut second_state.state.try_write().unwrap());
     // Generate scrollbar
     let mut scrollbar_state =
         ScrollbarState::new(second_state.size).position(second_state.selected());
