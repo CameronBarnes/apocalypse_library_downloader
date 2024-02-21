@@ -68,6 +68,15 @@ fn main() -> Result<()> {
         match tui.events.next()? {
             term::event::Event::Tick => app.tick(),
             term::event::Event::Key(key_event) => update(&mut app, key_event),
+            term::event::Event::Mouse(e) => {
+                match e.kind {
+                    crossterm::event::MouseEventKind::ScrollDown => app.next(),
+                    crossterm::event::MouseEventKind::ScrollUp => app.previous(),
+                    crossterm::event::MouseEventKind::ScrollLeft => app.left(),
+                    crossterm::event::MouseEventKind::ScrollRight => app.right(),
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }

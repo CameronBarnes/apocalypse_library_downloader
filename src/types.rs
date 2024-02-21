@@ -395,13 +395,14 @@ impl Category {
     ///  Currently either Alphabetically A-Z or by size decending
     ///
     pub fn sort(&mut self, style: SortStyle) {
+        let name = self.items[self.counter.selected()].name().to_owned();
+        let old_selected = self.counter.selected();
         match style {
             SortStyle::Alphabetical => {
                 self.items
                     .sort_unstable_by_key(|item| item.name().to_string());
             }
             SortStyle::Size => {
-                let name = self.items[self.counter.selected()].name().to_owned();
                 self.items.sort_unstable_by_key(|item| {
                     let size = match item {
                         LibraryItem::Document(doc) => doc.size(),
@@ -409,12 +410,12 @@ impl Category {
                     };
                     Reverse(size)
                 });
-                if self.counter.selected() != 0 {
-                    let found = self.items.iter().enumerate().find(|enumerated| enumerated.1.name().eq_ignore_ascii_case(&name));
-                    if let Some((i, _)) = found {
-                        self.counter.set_selected(i);
-                    }
-                }
+            }
+        }
+        if old_selected != 0 {
+            let found = self.items.iter().enumerate().find(|enumerated| enumerated.1.name().eq_ignore_ascii_case(&name));
+            if let Some((i, _)) = found {
+                self.counter.set_selected(i);
             }
         }
     }
