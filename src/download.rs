@@ -70,6 +70,7 @@ pub fn handle_download_file(url: &str, path_str: &str, overwrite: bool) -> Resul
     static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
         reqwest::ClientBuilder::new()
             .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/117.0")
+            .use_rustls_tls()
             .build()
             .unwrap()
     });

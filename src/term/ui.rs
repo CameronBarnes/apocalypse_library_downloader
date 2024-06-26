@@ -112,12 +112,16 @@ fn list_from_library_items(name: String, items: Option<&Vec<LibraryItem>>, selec
         let items: Vec<ListItem> = items.iter().map(|item| item.as_list_item()).collect();
         List::new(items)
             .block(block)
+            // Contributed this feature upstream just so that I could use it here
+            .scroll_padding(1)
             .highlight_style(highlight_style)
             .highlight_symbol(">> ")
     } else {
         let empty: Vec<ListItem> = Vec::new();
         List::new(empty)
             .block(block.dim())
+            // Contributed this feature upstream just so that I could use it here
+            .scroll_padding(1)
             .highlight_style(highlight_style)
             .highlight_symbol(">> ")
     }
